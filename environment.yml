@@ -6,9 +6,13 @@ channels:
 
 dependencies:
   - python=3.10
+  - pip
   - matplotlib
   - notebook
   - cpuonly
   - pytorch
   - torchvision
   - torchdata
+
+  - pip:
+    - flake8
