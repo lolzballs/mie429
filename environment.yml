@@ -16,3 +16,4 @@ dependencies:
 
   - pip:
     - flake8
+    - tqdm
