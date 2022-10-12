@@ -12,7 +12,7 @@ dependencies:
   - cpuonly
   - pytorch
   - torchvision
-  - torchdata
+  - conda-forge::torchdata # pytorch channel uses never version of glibc
 
   - pip:
     - flake8
