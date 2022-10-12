@@ -1,7 +1,6 @@
 name: mie429
 
 channels:
-  - pytorch
   - conda-forge
 
 dependencies:
@@ -17,3 +16,4 @@ dependencies:
   - pip:
     - flake8
     - tqdm
+    - pyyaml

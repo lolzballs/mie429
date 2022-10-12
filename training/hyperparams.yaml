@@ -1,0 +1,6 @@
+### YAML file to easily specify and modify hyperparameters used in main_training_script ###
+
+pretrain_source: 'imagenet'
+
+batch_size: 32
+num_epochs: 100

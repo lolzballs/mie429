@@ -10,7 +10,7 @@ class ModelManager():
 
     def pretrained_resnet50(self,pretrain_source="imagenet"):
 
-        if pretrain_source not in self.pretraining_options:
+        if pretrain_source not in self.pretraining_source:
             raise NotImplementedError(f"The specified pretrain_source argument {pretrain_source} is not supported, please use one of the following options: {' '.join(self.pretraining_source)}")
         
         if pretrain_source == "imagenet":
