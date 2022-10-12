@@ -16,3 +16,5 @@ dependencies:
 
   - pip:
     - flake8
+    - pydicom
+    - opencv-python
