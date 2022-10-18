@@ -1,7 +1,9 @@
 ### YAML file to easily specify and modify hyperparameters used in main_training_script ###
 
-experiment_name: "resnet50_baseline"
+experiment_name: "resnet34_baseline"
 
 pretrain_source: 'imagenet'
-batch_size: 32
-num_epochs: 100
+batch_size: 256
+num_epochs: 10
+
+optimizer_lr: 0.01

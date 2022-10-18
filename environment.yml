@@ -1,6 +1,7 @@
 name: mie429
 
 channels:
+  - pytorch
   - conda-forge
 
 dependencies:
@@ -8,10 +9,10 @@ dependencies:
   - pip
   - matplotlib
   - notebook
-  - cpuonly
+  - cudatoolkit=11.6
   - pytorch
   - torchvision
-  - torchdata
+  - conda-forge::torchdata # pytorch channel uses never version of glibc
 
   - pip:
     - flake8
