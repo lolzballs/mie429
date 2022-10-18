@@ -43,7 +43,7 @@ def image_matcher_class(img):
     return imgMatcher.findObject(paddingX=125, paddingY=175, draw_box=True)
     
 
-dir = "./bone_age_val/boneage-validation-dataset-1"
+dir = "./sample_data"
 files = [f for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f))]
 
 start_file = 4967
@@ -59,7 +59,7 @@ alternatives = [
 for alt in alternatives:
     for i in range(0, 10):
         print(f"Testing with file {files[i]}")
-        img = cv.imread(f"./bone_age_val/boneage-validation-dataset-1/{files[i]}")
+        img = cv.imread(f"./sample_data/{files[i]}")
         img_cp = img.copy()
         gray_img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)	
         result_img = alt(gray_img)
