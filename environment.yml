@@ -12,6 +12,10 @@ dependencies:
   - cpuonly
   - pytorch
   - torchvision
+  - opencv
+  - scipy
+  - numpy
+  - pynetdicom
   - conda-forge::torchdata # pytorch channel uses never version of glibc
 
   - pip:
