@@ -15,5 +15,3 @@ conda activate ./env
 
 For more information about maintaining the `environment.yml` file please check
 [the official conda reference](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file).
-
-blah
