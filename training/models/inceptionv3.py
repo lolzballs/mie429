@@ -4,8 +4,8 @@ import torch.nn.functional as F
 # from this https://www.kaggle.com/code/ivankunyankin/googlenet-inception-from-scratch-using-pytorch/notebook
 class InceptionV3(nn.Module):
     
-    def __init__(self, in_channels=3, use_auxiliary=True, num_classes=1000):
-        super(Inception, self).__init__()
+    def __init__(self, in_channels=3, use_auxiliary=True, num_classes=100):
+        super(InceptionV3, self).__init__()
         
         self.conv1 = ConvBlock(in_channels, 64, kernel_size=7, stride=2, padding=3)
         self.conv2 = ConvBlock(64, 192, kernel_size=3, stride=1, padding=1)
@@ -14,7 +14,7 @@ class InceptionV3(nn.Module):
         self.avgpool = nn.AvgPool2d(kernel_size=7, stride=1)
         
         self.dropout = nn.Dropout(0.4)
-        self.linear = nn.Linear(1024, num_classes)
+        self.fc = nn.Linear(1024, num_classes)
         
         self.use_auxiliary = use_auxiliary
         if use_auxiliary:
@@ -62,10 +62,9 @@ class InceptionV3(nn.Module):
         x = self.avgpool(x)
         x = x.reshape(x.shape[0], -1)
         x = self.dropout(x)
+        x = self.fc(x)
         
-        x = self.linear(x)
-        
-        return x, y, z
+        return x  #, y, z
 
 class ConvBlock(nn.Module):
     
