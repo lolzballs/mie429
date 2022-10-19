@@ -4,6 +4,6 @@ experiment_name: "resnet34_baseline"
 
 pretrain_source: 'imagenet'
 batch_size: 256
-num_epochs: 10
+num_epochs: 200
 
 optimizer_lr: 0.01
