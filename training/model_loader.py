@@ -8,6 +8,12 @@ class ModelManager():
         """
         self.pretraining_source = ["imagenet",'random']
 
+    def get_model(self,model_name="resnet34", pretrain_source="imagenet"):
+        if model_name == "resnet34":
+            return self.pretrained_resnet34(pretrain_source)
+        elif model_name == "resnet50":
+            return self.pretrained_resnet50(pretrain_source)
+
     def pretrained_resnet50(self,pretrain_source="imagenet"):
 
         if pretrain_source not in self.pretraining_source:
@@ -24,7 +30,6 @@ class ModelManager():
             resnet50_model = resnet50(weights=None)
             return resnet50_model, None
  
-
     def pretrained_resnet34(self,pretrain_source="imagenet"):
 
             if pretrain_source not in self.pretraining_source:
