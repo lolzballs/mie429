@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
+# from this https://www.kaggle.com/code/ivankunyankin/googlenet-inception-from-scratch-using-pytorch/notebook
 class InceptionV3(nn.Module):
     
     def __init__(self, in_channels=3, use_auxiliary=True, num_classes=1000):
