@@ -9,10 +9,12 @@ dependencies:
   - pip
   - matplotlib
   - notebook
-  - cpuonly
+  - cudatoolkit=11.6
   - pytorch
   - torchvision
   - conda-forge::torchdata # pytorch channel uses never version of glibc
 
   - pip:
     - flake8
+    - tqdm
+    - pyyaml
