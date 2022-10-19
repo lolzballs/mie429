@@ -1,2 +1,9 @@
 env/
 __pycache__/
+experiment_results/
+Bone+Age+Training+Set/
+Bone+Age+Training+Set+Annotations/
+Bone+Age+Validation+Set/
+*.png
+*.sh
+*.zip
