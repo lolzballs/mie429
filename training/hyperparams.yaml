@@ -2,7 +2,7 @@
 
 experiment_name: "resnet34_baseline"
 
-model_name: "resnet34"
+model_name: "simpleconv"
 pretrain_source: "imagenet"
 batch_size: 256
 num_epochs: 10
