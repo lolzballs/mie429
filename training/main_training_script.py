@@ -114,8 +114,6 @@ def main():
                         default='experiment_results')
     parser.add_argument('--record_results', help='boolean toggle whether statistics of run will be tracked/written or not',
                         default=True)
-    parser.add_argument('--model', help='model name',
-                        default="resnet34")
     args = parser.parse_args()
     
     print("Running with argparser Values:\n",args)
@@ -151,7 +149,6 @@ def main():
 
     modelManager = ModelManager()
     trainingModel,pretrained_transforms = modelManager.get_model(model_name=hyperparams['model_name'], pretrain_source=hyperparams['pretrain_source'])
-
     # Modify model by adding extra fc layer to output 1 to convert model for classification to regression
     # This section will possibly need edits for different models
     default_out_features = trainingModel.fc.out_features
