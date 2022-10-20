@@ -151,6 +151,7 @@ def main():
     trainingModel,pretrained_transforms = modelManager.get_model(model_name=hyperparams['model_name'], pretrain_source=hyperparams['pretrain_source'])
     # Modify model by adding extra fc layer to output 1 to convert model for classification to regression
     # This section will possibly need edits for different models
+    #TODO: currently assumes last layer is named "fc", fix in future
     default_out_features = trainingModel.fc.out_features
     trainingModel.fc = nn.Sequential(trainingModel.fc, nn.ReLU(), nn.Linear(in_features=default_out_features, out_features=1, bias=True))
     optimizer = torch.optim.Adam(trainingModel.parameters(),lr=hyperparams['optimizer_lr']) 
