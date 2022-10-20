@@ -1,4 +1,5 @@
 from torchvision.models import resnet50, ResNet50_Weights,resnet34, ResNet34_Weights
+import models
 
 class ModelManager():
     def __init__(self):
@@ -7,6 +8,18 @@ class ModelManager():
         either from direct import from pytorch or from the models folder
         """
         self.pretraining_source = ["imagenet",'random']
+
+    def get_model(self,model_name="resnet34", pretrain_source="imagenet"):
+        if model_name == "resnet34":
+            return self.pretrained_resnet34(pretrain_source)
+        elif model_name == "resnet50":
+            return self.pretrained_resnet50(pretrain_source)
+        elif model_name == "simpleconv":
+            return models.Simpleconv(), None
+        elif model_name == "inceptionv3":
+            return models.InceptionV3(), None
+        else:
+            raise ValueError("Wrong model name")
 
     def pretrained_resnet50(self,pretrain_source="imagenet"):
 
@@ -24,7 +37,6 @@ class ModelManager():
             resnet50_model = resnet50(weights=None)
             return resnet50_model, None
  
-
     def pretrained_resnet34(self,pretrain_source="imagenet"):
 
             if pretrain_source not in self.pretraining_source:
