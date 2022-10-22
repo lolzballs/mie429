@@ -25,6 +25,7 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
     best_loss = math.inf
     num_epochs = hp['num_epochs']
     start_epoch = 0
+    currDT = datetime.now()
     if hp['resume_train']:
         start_epoch = hp['resume_epoch']
         num_epochs += hp['resume_epoch']
@@ -105,31 +106,31 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                 best_model_wts = copy.deepcopy(model.state_dict())
         
         #save a general checkpoint every hp['saving_frequency'] epochs
-        if epoch%hp['saving_frequency'] == 0:
+        if epoch > 0 and epoch%hp['saving_frequency'] == 0:
+            print("---Saving General Checkpoint")
             plot_metrics = {"Train_Loss":train_loss_store, "Validation_Loss":val_loss_store, "Train_MAE":train_mae_store, "Validation_MAE":val_mae_store}
             torch.save({'epoch':epoch,
                         'model_state_dict':model.state_dict(),
                         'optimizer_state_dict':optimizer.state_dict(),
-                        'loss':best_loss,
+                        'loss':running_loss,
                         'scheduler_state_dict':lr_scheduler.state_dict()
                         },hp['model_output_dir']+'/'+hp['experiment_id']+'.pt')
-            currDT = datetime.now()
+            
             for i, (metric,storedata) in enumerate(plot_metrics.items()): # will expect train model to return a dictionary of metric name as keys and datalist as corresponding dict values for plotting
                 
                 plt.figure(i)
                 if args.resume_training:
                     plot_title = "Resumed " + hp['experiment_id'] + ": " + metric+" VS Epochs"
                     save_name = hp['model_output_dir']+'/resumed_'+currDT.strftime("%m%d_%H%M%S")+'_'+ hp['experiment_id']+metric+".png"
-                    x_vals = list(range(hyperparams['resume_epoch'],hyperparams['resume_epoch']+hyperparams['num_epochs']))
+                    x_vals = list(range(hp['resume_epoch'],hp['resume_epoch']+len(storedata)))
                 else:
                     plot_title = hp['experiment_id'] + ": " + metric+" VS Epochs"
                     save_name = hp['model_output_dir']+'/'+hp['experiment_id']+metric+".png"
-                    x_vals = list(range(0,hyperparams['num_epochs']))
+                    x_vals = list(range(0,len(storedata)))
 
                 
                 np_storedata = np.asarray(storedata)    #save the metric data so we can retrieve data and plot in aggregate plot later
                 np.savetxt(save_name[:-4]+'.csv',np_storedata,delimiter=',')
-
                 plt.plot(x_vals,storedata)
                 plt.xlabel("Epochs")
                 plt.ylabel(metric)
@@ -141,8 +142,6 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
     print(f'Best Validation Epoch Loss: {best_loss:4f}')
     # load best model weights
     model.load_state_dict(best_model_wts)
-
-    
 
     return model
 
@@ -221,9 +220,13 @@ def main():
         hyperparams['resume_epoch'] = checkpoint['epoch']
         hyperparams['resume_loss'] = checkpoint['loss']
         hyperparams['resume_train'] = True 
-        print("---Resuming Training with Prev. Best Validation Loss: {:.3f} Epoch: {}".format(checkpoint['loss'],checkpoint['epoch']))
+        print("---Resuming Training with Prev. Most Recently Saved Validation Loss: {:.3f} Epoch: {}".format(checkpoint['loss'],checkpoint['epoch']))
 
     best_model = train_model(trainingModel,pretrained_transforms, loss_function, optimizer, scheduler, dataloaders, hyperparams,args)
+
+    #Save final best model's weights for inference only
+    print("---Saving Best Model Weights")
+    torch.save(best_model.state_dict(),model_output_dir+'/'+experiment_id+'_best_model.pt')
 
     return True
     
