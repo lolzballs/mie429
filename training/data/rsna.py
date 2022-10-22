@@ -1,4 +1,5 @@
 import functools
+import hashlib
 import os
 import urllib.request
 import zipfile
@@ -9,12 +10,31 @@ import torchdata.datapipes as dp
 import torchvision.transforms.functional
 
 
-URL_TRAINING = "https://s3.amazonaws.com/east1.public.rsna.org/AI/2017/Bone+Age+Training+Set.zip"
-URL_TRAINING_ANNOTATIONS = "https://s3.amazonaws.com/east1.public.rsna.org/AI/2017/Bone+Age+Training+Set+Annotations.zip"
-URL_VALIDATION = "https://s3.amazonaws.com/east1.public.rsna.org/AI/2017/Bone+Age+Validation+Set.zip"
+URL_TRAINING = (
+    "https://s3.amazonaws.com/east1.public.rsna.org/AI/2017/Bone+Age+Training+Set.zip",
+    "9eab917f59bf520b4eb10803d33e7007ea3b3c2bd4df1c55aff45bc339b2736a",
+)
+URL_TRAINING_ANNOTATIONS = (
+    "https://s3.amazonaws.com/east1.public.rsna.org/AI/2017/Bone+Age+Training+Set+Annotations.zip",
+    "f6373249b6ec85d182c62ab83f05fa76dff90ba03315e455dd6de332dffc7215",
+)
+URL_VALIDATION = (
+    "https://s3.amazonaws.com/east1.public.rsna.org/AI/2017/Bone+Age+Validation+Set.zip",
+    "683ea5398dd9d0730af883e673176a5c6817fd35a5a59331a500fa7affcd36f0",
+)
+HASH_CHUNK_SIZE = 4096
 
 
-def _download_and_extract(root: str, url: str) -> str:
+def _check_integrity(file: str, hash: str) -> bool:
+    m = hashlib.sha256()
+    with open(file, 'rb') as f:
+        for byte_block in iter(lambda: f.read(HASH_CHUNK_SIZE), b''):
+            m.update(byte_block)
+    return m.hexdigest() == hash
+
+
+def _download_and_extract(root: str, url_hash: Tuple[str, str]) -> str:
+    url, hash = url_hash
     name, ext = os.path.splitext(os.path.basename(url))
     path = os.path.join(root, name)
 
@@ -22,10 +42,17 @@ def _download_and_extract(root: str, url: str) -> str:
     if os.path.isdir(path):
         return path
 
-    # download if zip doesn't exist
+    # download if zip doesn't exist, or if incomplete
     zipped_path = os.path.join(root, os.path.basename(url))
-    if not os.path.isfile(zipped_path):
+    exists = os.path.isfile(zipped_path) and _check_integrity(zipped_path, hash)
+    if not exists:
+        if os.path.isfile(zipped_path):
+            print('invalid download found, re-downloading')
+            os.remove(zipped_path)
+
+        print(f'downloading {url}')
         urllib.request.urlretrieve(url, zipped_path)
+    assert _check_integrity(zipped_path, hash), 'downloaded hash != expected hash'
 
     # extract
     with zipfile.ZipFile(zipped_path) as z:
