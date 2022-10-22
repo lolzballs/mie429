@@ -1,6 +1,7 @@
 ### YAML file to easily specify and modify hyperparameters used in main_training_script ###
 
 experiment_name: "resnet34_baseline"
+saving_frequency: 5
 
 pretrain_source: 'imagenet'
 batch_size: 256
