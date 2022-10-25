@@ -50,8 +50,6 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
             data_size_count = 0 #variable to count data samples can use if needed
             max_estimated_error = 0
             for batch_iter, (patient_id, bone_age, sex, img_batch) in enumerate(tqdm(dataloaders[phase])):
-                
-                bone_age = torch.tensor(list(map(int,bone_age)))  #turn label into torch tensor
                 bone_age = bone_age.unsqueeze(1)           # add extra dimension to label tensor
                 
                 data_size_count += img_batch.shape[0]
@@ -71,7 +69,6 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                 # forward
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
-
                     outputs = model(img_batch)
                     loss = loss_func(outputs, bone_age.float())
 
