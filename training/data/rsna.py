@@ -3,9 +3,10 @@ import hashlib
 import os
 import urllib.request
 import zipfile
-from typing import List, Optional, Tuple
+from typing import List, Optional, NamedTuple, Tuple
 
 import PIL
+import torch
 import torchdata.datapipes as dp
 import torchvision.transforms.functional
 
@@ -23,6 +24,13 @@ URL_VALIDATION = (
     "683ea5398dd9d0730af883e673176a5c6817fd35a5a59331a500fa7affcd36f0",
 )
 HASH_CHUNK_SIZE = 4096
+
+
+class RSNAEntry(NamedTuple):
+    patient_id: str
+    bone_age: int
+    sex: bool
+    img: torch.Tensor
 
 
 def _check_integrity(file: str, hash: str) -> bool:
@@ -118,6 +126,11 @@ def _load_patient_image(training_root: str, ann: Tuple) -> Tuple:
         return id, *rest, torchvision.transforms.functional.to_tensor(image)
 
 
+def _normalize_datatypes(entry: Tuple) -> RSNAEntry:
+    patient_id, bone_age, sex, img = entry
+    return RSNAEntry(patient_id, int(bone_age), sex.lower() == "true", img)
+
+
 def _build_datapipe(root: str, annotations: str,
                     order: Optional[List[int]] = None):
     datapipe = dp.iter.IterableWrapper([annotations])
@@ -125,10 +138,12 @@ def _build_datapipe(root: str, annotations: str,
     datapipe = datapipe.parse_csv(skip_lines=1)
     datapipe = datapipe.map(functools.partial(_reorder_tuple, order))
     datapipe = datapipe.map(functools.partial(_load_patient_image, root))
+    datapipe = datapipe.map(_normalize_datatypes)
     return datapipe
 
 
-def RSNA(root=".data"):
+def RSNA(root=".data") -> Tuple[dp.iter.IterDataPipe[RSNAEntry],
+                                dp.iter.IterDataPipe[RSNAEntry]]:
     training_root, training_annotations, validation_root, \
         validation_annotations = _download_dataset(root)
     training_dp = _build_datapipe(training_root, training_annotations)
