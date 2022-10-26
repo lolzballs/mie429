@@ -18,6 +18,8 @@ class ModelManager():
             return models.Simpleconv(), None
         elif model_name == "inceptionv3":
             return models.InceptionV3(), None
+        elif model_name == "bilbily":
+            return models.Bilbily(), None
         else:
             raise ValueError("Wrong model name")
 
