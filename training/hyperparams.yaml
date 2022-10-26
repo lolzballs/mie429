@@ -3,7 +3,8 @@
 experiment_name: "resnet34_baseline"
 saving_frequency: 5
 
-model_name: "inceptionv3"
+model:
+  name: "inceptionv3"
 pretrain_source: "imagenet"
 batch_size: 256
 num_epochs: 200

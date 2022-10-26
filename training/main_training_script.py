@@ -193,8 +193,15 @@ def main():
     val_loader = torch.utils.data.DataLoader(dataset=val_dp)
     dataloaders = {"train":train_loader, 'val':val_loader}
 
+    model_params = copy.deepcopy(hyperparams['model'])
+    del model_params['name']
+
     modelManager = ModelManager()
-    trainingModel,pretrained_transforms = modelManager.get_model(model_name=hyperparams['model_name'], pretrain_source=hyperparams['pretrain_source'])
+    trainingModel, pretrained_transforms = modelManager.get_model(
+        model_name=hyperparams['model']['name'],
+        pretrain_source=hyperparams['pretrain_source'],
+        **model_params,
+    )
     # Modify model by adding extra fc layer to output 1 to convert model for classification to regression
     # This section will possibly need edits for different models
     #TODO: currently assumes last layer is named "fc", fix in future
