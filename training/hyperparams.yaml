@@ -4,9 +4,10 @@ experiment_name: "resnet34_baseline"
 saving_frequency: 5
 
 model:
-  name: "inceptionv3"
+  name: "bilbily"
+  pretrained: true
 pretrain_source: "imagenet"
-batch_size: 256
+batch_size: 32
 num_epochs: 200
 
 optimizer_lr: 0.01
