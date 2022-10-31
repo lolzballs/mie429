@@ -1,70 +1,42 @@
-import cv2 as cv
-import matplotlib.pyplot as plt
+import argparse
 import os
-import numpy as np
+import cv2 as cv
 
 from image_matcher import ImageMatcher
 
-# Masks by setting all non-255 values to 0
-def absolute_max(img):
-    img_cp = img.copy()
-    img_cp[img_cp < 255] = 0
-    return img_cp
-
-# Floors and rounds based on a percentile threshold value
-def threshold_max(img, percentile=99):
-    img_cp = img.copy()
-    threshold = np.percentile(img, percentile)
-    img_cp[img_cp < threshold] = 0
-    img_cp[img_cp > 0] = 255
-    return img_cp
-
-# Template Matching
-def brute_force_temp_matching(img):
-    icon = cv.imread('icon.png',cv.IMREAD_GRAYSCALE)
-    orb = cv.ORB_create()
-    kp1, des1 = orb.detectAndCompute(icon,None)
-    kp2, des2 = orb.detectAndCompute(img,None)
-    
-    bf = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
-    matches = bf.match(des1,des2)
-    matches = sorted(matches, key = lambda x:x.distance)
-    
-    kp_img = cv.drawMatches(icon,kp1,img,kp2,matches[:10],None,flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-    
-    return kp_img
-
-# Combines template matching + threshold maxing + draws a circular bounding box
-def image_matcher_class(img):
+# Combines template matching + threshold maxing + draws a rectangular bounding box
+def image_matching(img):
     imgMatcher = ImageMatcher(cv.imread('icon.png'))
-    # img = threshold_max(img)
-    # cv.GaussianBlur(img,(5,5),0)
     imgMatcher.uploadSearchImage(img)
-    return imgMatcher.findObject(paddingX=125, paddingY=175, draw_box=True)
-    
+    return imgMatcher.findObject(paddingX=125, paddingY=175, draw_box=False)
 
-dir = "./sample_data"
-files = [f for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f))]
+def remove_image_label(input_dir, input_files, output_dir, save_matched_img):
+    if len(input_files) == 0:
+        files = [f for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f))]
+    else:
+        files = input_files
 
-start_file = 4967
-
-# Other alternatives broken right now due to different return contents
-alternatives = [
-                # absolute_max,
-                # threshold_max,
-                # brute_force_temp_matching,
-                image_matcher_class
-                ]
-
-for alt in alternatives:
-    for i in range(0, 10):
-        print(f"Testing with file {files[i]}")
-        img = cv.imread(f"./sample_data/{files[i]}")
-        img_cp = img.copy()
+    for file in files:
+        img = cv.imread(input_dir + "/" + file)
         gray_img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)	
-        result_img = alt(gray_img)
-        
-        fig, ax = plt.subplots(1,2)
-        ax[0].imshow(img)
-        ax[1].imshow(result_img)
-        plt.show()
+        kp_img, result_img = image_matching(gray_img)
+        cv.imwrite(f"{output_dir}/{file}", result_img)
+        if save_matched_img:
+            cv.imwrite(f"{output_dir}/matched_{file}", kp_img)
+            
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Image signature removal for bone xray images",
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-d", "--input-dir", help="Input directory which stores the input files", required=True)
+    parser.add_argument("-f", "--input-files", nargs='+', help="Input files located within the input directory to be processed, \
+                                                                use relative file paths with respect to the input directory. \
+                                                                do not specify this argument if all files in directory should \
+                                                                processed", default=[])
+    parser.add_argument("-o", "--output-dir", help="Output directory to store processed images", required=True)
+    parser.add_argument("-s", "--save-matched-img", help="Boolean to indicates whether or not to save the bounding box image \
+                                                     in addition to the processed image after signature removal", default=False)
+    args = parser.parse_args()
+    config = vars(args)
+    remove_image_label(config["input_dir"], config["input_files"],
+                       config["output_dir"], config["save_matched_img"])
