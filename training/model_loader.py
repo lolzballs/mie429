@@ -9,7 +9,7 @@ class ModelManager():
         """
         self.pretraining_source = ["imagenet",'random']
 
-    def get_model(self,model_name="resnet34", pretrain_source="imagenet"):
+    def get_model(self, model_name="resnet34", pretrain_source="imagenet", **kwargs):
         if model_name == "resnet34":
             return self.pretrained_resnet34(pretrain_source)
         elif model_name == "resnet50":
@@ -18,6 +18,8 @@ class ModelManager():
             return models.Simpleconv(), None
         elif model_name == "inceptionv3":
             return models.InceptionV3(), None
+        elif model_name == "bilbily":
+            return models.Bilbily(**kwargs), None
         else:
             raise ValueError("Wrong model name")
 

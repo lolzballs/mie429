@@ -3,9 +3,13 @@
 experiment_name: "resnet34_baseline"
 saving_frequency: 5
 
-model_name: "resnet"
+
+model:
+  name: "bilbily"
+  pretrained: true
+
 pretrain_source: "imagenet"
-batch_size: 256
+batch_size: 32
 num_epochs: 200
 
 optimizer_lr: 0.01
