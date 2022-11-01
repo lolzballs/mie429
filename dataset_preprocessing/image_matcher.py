@@ -1,9 +1,5 @@
 import numpy as np 
 import cv2
-from matplotlib import pyplot as plt
-import statistics
-import pandas as pd 
-from scipy import stats
 
 class ImageMatcher:
     def __init__(self, base_image):
@@ -35,7 +31,6 @@ class ImageMatcher:
         for m in good_matches:
             points_X.append(kp2[m.trainIdx].pt[0])
             points_Y.append(kp2[m.trainIdx].pt[1])
-
         kp_img = cv2.drawMatches(self.base_img, kp1, self.search_img, kp2, good_matches, None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
         self.search_img, mask = self.__get_bounding_box(points_X, points_Y, self.search_img, padding_X, padding_Y, draw_box)
         
