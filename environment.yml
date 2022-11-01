@@ -12,9 +12,14 @@ dependencies:
   - cudatoolkit=11.6
   - pytorch
   - torchvision
+  - pandas
+  - scipy
+  - numpy
+  - pynetdicom
   - conda-forge::torchdata # pytorch channel uses never version of glibc
 
   - pip:
     - flake8
+    - opencv-python-headless
     - tqdm
     - pyyaml

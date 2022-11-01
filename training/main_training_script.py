@@ -18,6 +18,13 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+
+transform = torchvision.transforms.Compose([
+    torchvision.transforms.Normalize(mean=[0.18755578994750977],
+                                     std=[0.1980060900313924]),
+    torchvision.transforms.Resize((512, 512)),
+])
+
 def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler, dataloaders,hp,args):
     since = time.time()
     train_loss_store,val_loss_store,train_mae_store,val_mae_store = [],[],[],[]
@@ -56,12 +63,14 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                 
                 ###
                 # Preprocessing steps may require edits depending on model/experiment needs
-                img_batch = img_batch.expand(-1,3,-1,-1)        #expand grayscale dim to rgb 3dim
-                img_batch = pretrained_transforms(img_batch)   #apply any pretraining transforms
+                img_batch = img_batch.expand(-1,1,-1,-1)        #expand grayscale dim to rgb 3dim
+                # img_batch = pretrained_transforms(img_batch)   #apply any pretraining transforms
+
                 ###
 
                 img_batch = img_batch.to(device)
                 bone_age = bone_age.to(device)
+                sex = sex.to(device)
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
@@ -69,7 +78,7 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                 # forward
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
-                    outputs = model(img_batch)
+                    outputs = model(img_batch, sex.float())
                     loss = loss_func(outputs, bone_age.float())
 
                     # backward + optimize only if in training phase
@@ -185,21 +194,26 @@ def main():
         model_output_dir = args.resume_checkpoint_dir
 
     train_dp, val_dp = data.RSNA(root=args.data)
-    # The images from RSNA are not the same shape so we need to crop/scale/
-    # post-process. For now just use a 1024x1024 crop to show how things work.
-    train_dp = train_dp.map(crop_image)
-
+    train_dp = train_dp.map(apply_to_image(transform))
+    val_dp = val_dp.map(apply_to_image(transform))
     train_loader = torch.utils.data.DataLoader(dataset=train_dp, batch_size=hyperparams['batch_size'])
     val_loader = torch.utils.data.DataLoader(dataset=val_dp)
     dataloaders = {"train":train_loader, 'val':val_loader}
 
+    model_params = copy.deepcopy(hyperparams['model'])
+    del model_params['name']
+
     modelManager = ModelManager()
-    trainingModel,pretrained_transforms = modelManager.get_model(model_name=hyperparams['model_name'], pretrain_source=hyperparams['pretrain_source'])
+    trainingModel, pretrained_transforms = modelManager.get_model(
+        model_name=hyperparams['model']['name'],
+        pretrain_source=hyperparams['pretrain_source'],
+        **model_params,
+    )
     # Modify model by adding extra fc layer to output 1 to convert model for classification to regression
     # This section will possibly need edits for different models
     #TODO: currently assumes last layer is named "fc", fix in future
-    default_out_features = trainingModel.fc.out_features
-    trainingModel.fc = nn.Sequential(trainingModel.fc, nn.ReLU(), nn.Linear(in_features=default_out_features, out_features=1, bias=True))
+    # default_out_features = trainingModel.fc.out_features
+    # trainingModel.fc = nn.Sequential(trainingModel.fc, nn.ReLU(), nn.Linear(in_features=default_out_features, out_features=1, bias=True))
     trainingModel = trainingModel.to(device)
     optimizer = torch.optim.Adam(trainingModel.parameters(),lr=hyperparams['optimizer_lr']) 
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=0.5, patience=10,min_lr=0.001, verbose=True) #Start at large learning rate to quickly learn and only reduce when loss plateaus
