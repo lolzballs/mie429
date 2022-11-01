@@ -6,13 +6,13 @@ from image_matcher import ImageMatcher
 
 # Combines template matching + threshold maxing + draws a rectangular bounding box
 def image_matching(img):
-    imgMatcher = ImageMatcher(cv.imread('icon.png'))
-    imgMatcher.uploadSearchImage(img)
-    return imgMatcher.findObject(paddingX=125, paddingY=175, draw_box=False)
+    img_matcher = ImageMatcher(cv.imread('icon.png'))
+    img_matcher.upload_search_image(img)
+    return img_matcher.find_object(padding_X=125, padding_Y=175, draw_box=False)
 
 def remove_image_label(input_dir, input_files, output_dir, save_matched_img):
     if len(input_files) == 0:
-        files = [f for f in os.listdir(dir) if os.path.isfile(os.path.join(dir, f))]
+        files = [f for f in os.listdir(input_dir)]
     else:
         files = input_files
 

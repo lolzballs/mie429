@@ -6,63 +6,63 @@ import pandas as pd
 from scipy import stats
 
 class ImageMatcher:
-    def __init__(self, baseImage):
-        self.baseImg = baseImage
-        self.searchImg = []
-        self.refineData, self.drawZone = False, False
-        self.allignmentStage = 0
+    def __init__(self, base_image):
+        self.base_img = base_image
+        self.search_img = []
+        self.refine_data, self.draw_zone = False, False
+        self.allignment_stage = 0
 
 
-    def uploadSearchImage(self, searchImage):
-        if searchImage.any() == None:
+    def upload_search_image(self, search_image):
+        if search_image.any() == None:
             print("image could not be found")
             return False
-        self.searchImg = searchImage.copy()
+        self.search_img = search_image.copy()
         return True 
 
-    def findObject(self, paddingX=0, paddingY=0, draw_box=False):
+    def find_object(self, padding_X=0, padding_Y=0, draw_box=False):
         orb = cv2.ORB_create()
-        kp1, des1 = orb.detectAndCompute(self.baseImg,None)
-        kp2, des2 = orb.detectAndCompute(self.searchImg,None)
+        kp1, des1 = orb.detectAndCompute(self.base_img, None)
+        kp2, des2 = orb.detectAndCompute(self.search_img, None)
     
         bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
         matches = bf.match(des1,des2)
         matches = sorted(matches, key = lambda x:x.distance)
         good_matches = matches[:10]
         
-        pointsX = []
-        pointsY = []
+        points_X = []
+        points_Y = []
         for m in good_matches:
-            pointsX.append(kp2[m.trainIdx].pt[0])
-            pointsY.append(kp2[m.trainIdx].pt[1])
+            points_X.append(kp2[m.trainIdx].pt[0])
+            points_Y.append(kp2[m.trainIdx].pt[1])
 
-        kp_img = cv2.drawMatches(self.baseImg,kp1,self.searchImg,kp2,good_matches,None,flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-        self.searchImg, mask = self.__getBoundingBox(pointsX, pointsY, self.searchImg, paddingX, paddingY, draw_box)
+        kp_img = cv2.drawMatches(self.base_img, kp1, self.search_img, kp2, good_matches, None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+        self.search_img, mask = self.__get_bounding_box(points_X, points_Y, self.search_img, padding_X, padding_Y, draw_box)
         
         if mask is not None:
             self.__fill_box(mask)
 
-        return kp_img, self.searchImg
+        return kp_img, self.search_img
     
     def __fill_box(self, mask):
-        est_bkgd_color = np.percentile(self.searchImg, 30)
-        self.searchImg = np.multiply(self.searchImg, mask)
+        est_bkgd_color = np.percentile(self.search_img, 30)
+        self.search_img = np.multiply(self.search_img, mask)
         mask[mask < 1] = est_bkgd_color
-        self.searchImg = np.add(self.searchImg, mask)
+        self.search_img = np.add(self.search_img, mask)
 
-    def __getBoundingBox(self, dataX, dataY, img, paddingX, paddingY, draw_box):
-        minX = max(0, int(min(dataX) - paddingX/2))
-        minY = max(0, int(min(dataY) - paddingY/2))
-        maxX = min(img.shape[1], int(max(dataX) + paddingX/2))
-        maxY = min(img.shape[0], int(max(dataY) + paddingY/2))
-        bounding_box_area = (maxX-minX)*(maxY-minY)
+    def __get_bounding_box(self, data_X, data_Y, img, padding_X, padding_Y, draw_box):
+        min_X = max(0, int(min(data_X) - padding_X/2))
+        min_Y = max(0, int(min(data_Y) - padding_Y/2))
+        max_X = min(img.shape[1], int(max(data_X) + padding_X/2))
+        max_Y = min(img.shape[0], int(max(data_Y) + padding_Y/2))
+        bounding_box_area = (max_X-min_X)*(max_Y-min_Y)
         img_area = img.shape[0]*img.shape[1]
         
         # Logic check, if box is more than 10% of the image its probably a bad detection
         bad_detection = bounding_box_area > 0.1*img_area
         if draw_box and not bad_detection:
-            cv2.rectangle(img, (minX, minY), (maxX, maxY), (255, 255, 0), 10)
-        mask = cv2.rectangle(np.ones_like(img), (minX, minY), (maxX, maxY), (0, 0, 0), -1)
+            cv2.rectangle(img, (min_X, min_Y), (max_X, max_Y), (255, 255, 0), 10)
+        mask = cv2.rectangle(np.ones_like(img), (min_X, min_Y), (max_X, max_Y), (0, 0, 0), -1)
 
         if bad_detection:
             return img, None
