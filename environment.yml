@@ -9,7 +9,7 @@ dependencies:
   - pip
   - matplotlib
   - notebook
-  - cpuonly
+  - cudatoolkit=11.6
   - pytorch
   - torchvision
   - pandas
@@ -21,3 +21,5 @@ dependencies:
   - pip:
     - flake8
     - opencv-python-headless
+    - tqdm
+    - pyyaml
