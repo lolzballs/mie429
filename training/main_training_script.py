@@ -78,7 +78,10 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                 # forward
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
-                    outputs = model(img_batch, sex.float())
+                    if model.__class__.__name__ == "bilbily":
+                        outputs = model(img_batch, sex.float())
+                    else:
+                        outputs = model(img_batch)
                     loss = loss_func(outputs, bone_age.float())
 
                     # backward + optimize only if in training phase

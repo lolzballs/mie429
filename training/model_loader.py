@@ -20,6 +20,8 @@ class ModelManager():
             return models.InceptionV3(), None
         elif model_name == "bilbily":
             return models.Bilbily(**kwargs), None
+        elif model_name == "vgg16":
+            return models.Vgg16(), None
         else:
             raise ValueError("Wrong model name")
 
