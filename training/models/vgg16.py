@@ -13,7 +13,7 @@ class Vgg16(nn.Module):
         super().__init__()
         weights = torchvision.models.VGG16_Weights.DEFAULT if pretrained else None
         self.vgg16 = torchvision.models.vgg16(weights=weights)
-        self.vgg16.features[0] = nn.Conv2d(1, 64, 3)
+        # self.vgg16.features[0] = nn.Conv2d(1, 64, 3)
         # self.vgg16.features[30] = nn.Identity()
         # self.vgg16.avgpool = nn.Identity()
         self.vgg16.classifier = nn.Identity()

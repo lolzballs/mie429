@@ -10,6 +10,6 @@ model:
 
 pretrain_source: "imagenet"
 batch_size: 32
-num_epochs: 2
+num_epochs: 200
 
 optimizer_lr: 0.01

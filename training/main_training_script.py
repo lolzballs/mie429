@@ -63,7 +63,7 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                 
                 ###
                 # Preprocessing steps may require edits depending on model/experiment needs
-                img_batch = img_batch.expand(-1,1,-1,-1)        #expand grayscale dim to rgb 3dim
+                img_batch = img_batch.expand(-1,3,-1,-1)        #expand grayscale dim to rgb 3dim
                 # img_batch = pretrained_transforms(img_batch)   #apply any pretraining transforms
 
                 ###
