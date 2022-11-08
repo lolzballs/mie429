@@ -1,6 +1,7 @@
 from torchvision.models import resnet50, ResNet50_Weights,resnet34, ResNet34_Weights
 import models
 import torchvision.transforms as transforms
+import torch
 
 class AddGaussianNoise(object):
     # Custom class to add gaussian noise to input images as data augmentation
@@ -34,7 +35,7 @@ class ModelManager():
         # Resizing can be done before or after contrast
         self.transform_string_key_base = {'gaussiannoise':AddGaussianNoise(0.,gaussian_std), #MUST set std to a value between 0 - 0.2 or else image becomes TOO much noise since tensor pixels are autoscaled to 0-1
                                         'normalize':transforms.Normalize((0.1875,),(0.198,)),
-                                        'resize':transforms.Resize(input_size),
+                                        'resize':transforms.Resize((input_size, input_size)),
                                         'adjust_contrast':adjust_contrast_compose_transform(contrast_factor),
                                         'random_affine':transforms.RandomAffine(degrees=affine_rotation,translate=(affine_translate_ratio,affine_translate_ratio))} #random image rotation by arg degree and translate by arg.decimal% of input_image size
 
@@ -88,7 +89,7 @@ class ModelManager():
                 return resnet34_model, None
 
     def get_data_transform(self,transform_string_keys):
-        compose_list = [transforms.ToTensor()]
+        compose_list = []
         for t in transform_string_keys:
             if t.lower() not in self.transform_string_key_base.keys():
                 raise NotImplementedError(f"The specified data transform  {t} is not supported, please use one of the following options: {' '.join(self.transform_string_key_base.keys())}")

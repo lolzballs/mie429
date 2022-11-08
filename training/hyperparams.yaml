@@ -2,6 +2,7 @@
 
 experiment_name: "vgg16"
 saving_frequency: 5
+data_preprocess: true
 
 
 model:
