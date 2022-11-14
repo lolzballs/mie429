@@ -18,13 +18,6 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-
-transform = torchvision.transforms.Compose([
-    torchvision.transforms.Normalize(mean=[0.18755578994750977],
-                                     std=[0.1980060900313924]),
-    torchvision.transforms.Resize((512, 512)),
-])
-
 def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler, dataloaders,hp,args):
     since = time.time()
     train_loss_store,val_loss_store,train_mae_store,val_mae_store = [],[],[],[]
@@ -63,7 +56,7 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                 
                 ###
                 # Preprocessing steps may require edits depending on model/experiment needs
-                img_batch = img_batch.expand(-1,1,-1,-1)        #expand grayscale dim to rgb 3dim
+                img_batch = img_batch.expand(-1,3,-1,-1)        #expand grayscale dim to rgb 3dim
                 # img_batch = pretrained_transforms(img_batch)   #apply any pretraining transforms
 
                 ###
@@ -78,7 +71,10 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                 # forward
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
-                    outputs = model(img_batch, sex.float())
+                    if model.__class__.__name__ == "bilbily":
+                        outputs = model(img_batch, sex.float())
+                    else:
+                        outputs = model(img_batch)
                     loss = loss_func(outputs, bone_age.float())
 
                     # backward + optimize only if in training phase
@@ -193,17 +189,19 @@ def main():
         experiment_id = args.resume_checkpoint_dir.split('/')[-1]
         model_output_dir = args.resume_checkpoint_dir
 
-    train_dp, val_dp = data.RSNA(root=args.data)
-    train_dp = train_dp.map(apply_to_image(transform))
-    val_dp = val_dp.map(apply_to_image(transform))
-    train_loader = torch.utils.data.DataLoader(dataset=train_dp, batch_size=hyperparams['batch_size'])
-    val_loader = torch.utils.data.DataLoader(dataset=val_dp)
-    dataloaders = {"train":train_loader, 'val':val_loader}
-
     model_params = copy.deepcopy(hyperparams['model'])
     del model_params['name']
 
     modelManager = ModelManager()
+
+    transforms = modelManager.get_data_transform(["resize","adjust_contrast","normalize","gaussiannoise"])
+    train_dp, val_dp = data.RSNA(root=args.data, preprocessed=hyperparams['data_preprocess'])
+    train_dp = train_dp.map(apply_to_image(transforms))
+    val_dp = val_dp.map(apply_to_image(transforms))
+    train_loader = torch.utils.data.DataLoader(dataset=train_dp, batch_size=hyperparams['batch_size'])
+    val_loader = torch.utils.data.DataLoader(dataset=val_dp)
+    dataloaders = {"train":train_loader, 'val':val_loader}
+
     trainingModel, pretrained_transforms = modelManager.get_model(
         model_name=hyperparams['model']['name'],
         pretrain_source=hyperparams['pretrain_source'],

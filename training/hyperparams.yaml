@@ -1,11 +1,12 @@
 ### YAML file to easily specify and modify hyperparameters used in main_training_script ###
 
-experiment_name: "resnet34_baseline"
+experiment_name: "vgg16"
 saving_frequency: 5
+data_preprocess: true
 
 
 model:
-  name: "bilbily"
+  name: "vgg16"
   pretrained: true
 
 pretrain_source: "imagenet"

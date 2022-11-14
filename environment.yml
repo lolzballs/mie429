@@ -10,7 +10,7 @@ dependencies:
   - matplotlib
   - notebook
   - cudatoolkit=11.6
-  - pytorch
+  - pytorch=1.12.1
   - torchvision
   - pandas
   - scipy
