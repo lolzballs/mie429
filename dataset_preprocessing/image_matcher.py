@@ -22,12 +22,12 @@ class ImageMatcher:
         kp2, des2 = orb.detectAndCompute(self.search_img, None)
         if len(kp2)==0 or des2 is None:
             return None, None
-
+            
         bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
         matches = bf.match(des1,des2)
         matches = sorted(matches, key = lambda x:x.distance)
         good_matches = matches[:10]
-
+        
         points_X = []
         points_Y = []
         for m in good_matches:
