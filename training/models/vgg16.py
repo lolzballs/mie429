@@ -40,7 +40,7 @@ class Vgg16(nn.Module):
     def forward(self, x):
         # add in relu shit
         x = self.vgg16(x)
-        x = x.reshape(32, 512, 7, 7)
+        x = x.reshape(-1, 512, 7, 7)
         xBn = self.bn(x)
         xConv = self.conv(xBn)
         xBn = xBn*xConv

@@ -23,7 +23,7 @@ def remove_image_label(input_dir, input_files, icon_file, output_dir, save_match
             kp_img, result_img = image_matching(gray_img, icon_file)
             if kp_img is None or result_img is None:
                 print(f"Failed to run matching on this file {file}")
-                cv.imwrite(f"{output_dir}/{file}", img)
+                cv.imwrite(f"{output_dir}/{file}", gray_img)
             else:
                 cv.imwrite(f"{output_dir}/{file}", result_img)
                 if save_matched_img:
