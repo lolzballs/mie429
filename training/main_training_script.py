@@ -71,7 +71,7 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                 # forward
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
-                    if model.__class__.__name__ == "bilbily":
+                    if model.__class__.__name__ == "Bilbily":
                         outputs = model(img_batch, sex.float())
                     else:
                         outputs = model(img_batch)
