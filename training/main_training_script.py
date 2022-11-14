@@ -195,7 +195,7 @@ def main():
     modelManager = ModelManager()
 
     transforms = modelManager.get_data_transform(["resize","adjust_contrast","normalize","gaussiannoise"])
-    train_dp, val_dp = data.RSNA(root=args.data, preprocessed=hyperparams['data_preprocess'])
+    train_dp, val_dp = data.RSNA(root=args.data)
     train_dp = train_dp.map(apply_to_image(transforms))
     val_dp = val_dp.map(apply_to_image(transforms))
     train_loader = torch.utils.data.DataLoader(dataset=train_dp, batch_size=hyperparams['batch_size'])

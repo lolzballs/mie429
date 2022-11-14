@@ -142,13 +142,10 @@ def _build_datapipe(root: str, annotations: str,
     return datapipe
 
 
-def RSNA(root=".data", preprocessed=False) -> Tuple[dp.iter.IterDataPipe[RSNAEntry],
+def RSNA(root=".data") -> Tuple[dp.iter.IterDataPipe[RSNAEntry],
                                 dp.iter.IterDataPipe[RSNAEntry]]:
     training_root, training_annotations, validation_root, \
         validation_annotations = _download_dataset(root)
-    if preprocessed: 
-        training_root = '/home/aliu/mie429/training/data/Bone+Age+Training+Set+Processed/boneage-training-dataset'
-        validation_root = '/home/aliu/mie429/training/data/Bone+Age+Validation+Set+Processed/Bone Age Validation Set'
     training_dp = _build_datapipe(training_root, training_annotations)
     validation_dp = _build_datapipe(validation_root,
                                     validation_annotations, [0, 2, 1])
