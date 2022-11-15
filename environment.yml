@@ -17,4 +17,6 @@ dependencies:
   - pip:
     - flake8
     - pydicom
-    - opencv-python
+    - opencv-python-headless
+    - tqdm
+    - pyyaml
