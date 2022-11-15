@@ -21,16 +21,15 @@ def get_image(file_name, ds, dest_dir = '/pngs'):
     return
 
 def get_patient_info(ds, all_patient_dict):
-    all_patient_dict['si_uid'].append(str(ds.SeriesInstanceUID))
+    all_patient_dict['si_uid'].append(str(ds.SeriesInstanceUID)) 
     all_patient_dict['patient_sex'].append(ds.PatientSex)
-    all_patient_dict['instance_num'].append(ds.InstanceNumber)
     # all_patient_dict['img_orient'] = list(ds.ImageOrientationPatient) # I think this just gets axial, coronal, etc. orientations
     return all_patient_dict
 
 def convert(src_dir = '/dcms', dest_dir = '/pngs'): # specify file paths
     src = os.getcwd() + src_dir
     
-    patients_info = {'si_uid': [], 'patient_sex': [], 'instance_num': []}
+    patients_info = {'si_uid': [], 'patient_sex': []}
     for file in os.listdir(src):
         if file.endswith(".dcm"):
             file_path = src + '/' + file 
@@ -43,5 +42,4 @@ if __name__ == '__main__':
     result = convert()
     df = pd.DataFrame.from_dict(result)
     df = df.set_index('si_uid')
-    print(df.head())
-    print(df.shape)
+    df.to_csv('patient_info.csv')
