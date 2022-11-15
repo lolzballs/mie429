@@ -53,6 +53,12 @@ class Bilbily(nn.Module):
     def forward(self, x, sex):
         if self.sex_encoding == 'onehot':
             sex = nn.functional.one_hot(sex.long(), 2).float()
+        elif self.sex_encoding == 'binary':
+            sex = torch.unsqueeze(sex,1)
+        else:
+            raise NotImplementedError("incorrect sex_encoding argument")
+
+        print("sex input:",sex.shape)
         x = self.inception(x)
         sex = self.sex_fc(sex)
 
