@@ -125,7 +125,7 @@ class Vgg16(nn.Module):
         return features_conv(x)
 
 model = Vgg16()
-model.load_state_dict(torch.load('vgg16-with preprocessing_1109_002607.pt', map_location=torch.device('cpu')), strict=False)
+model.load_state_dict(torch.load('vgg16-withpreprocessing_1109_002607.pt', map_location=torch.device('cpu')), strict=False)
 model.eval()
 # print(model.vgg16.features)
 # print("-------------------------- START --------------------------")
