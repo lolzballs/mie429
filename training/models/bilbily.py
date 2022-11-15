@@ -58,7 +58,6 @@ class Bilbily(nn.Module):
         else:
             raise NotImplementedError("incorrect sex_encoding argument")
 
-        print("sex input:",sex.shape)
         x = self.inception(x)
         sex = self.sex_fc(sex)
 
