@@ -56,7 +56,8 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                 
                 ###
                 # Preprocessing steps may require edits depending on model/experiment needs
-                img_batch = img_batch.expand(-1,3,-1,-1)        #expand grayscale dim to rgb 3dim
+                img_batch = img_batch.expand(-1,1,-1,-1)        #expand grayscale dim to rgb 3dim
+                # pretrained transforms not used when self-defined transforms are built into dataloader
                 # img_batch = pretrained_transforms(img_batch)   #apply any pretraining transforms
 
                 ###
@@ -194,15 +195,16 @@ def main():
 
     modelManager = ModelManager()
 
-    transforms = modelManager.get_data_transform(["resize","adjust_contrast","normalize","gaussiannoise"])
+    train_transforms = modelManager.get_data_transform(["resize","adjust_contrast","normalize","gaussiannoise"])
+    val_transforms = modelManager.get_data_transform(["resize","adjust_contrast","normalize"])
     train_dp, val_dp = data.RSNA(root=args.data)
-    train_dp = train_dp.map(apply_to_image(transforms))
-    val_dp = val_dp.map(apply_to_image(transforms))
+    train_dp = train_dp.map(apply_to_image(train_transforms))
+    val_dp = val_dp.map(apply_to_image(val_transforms))
     train_loader = torch.utils.data.DataLoader(dataset=train_dp, batch_size=hyperparams['batch_size'])
     val_loader = torch.utils.data.DataLoader(dataset=val_dp)
     dataloaders = {"train":train_loader, 'val':val_loader}
 
-    trainingModel, pretrained_transforms = modelManager.get_model(
+    trainingModel, pretrained_transforms = modelManager.get_model( #Pretrained transforms not used if transforms are self defined above
         model_name=hyperparams['model']['name'],
         pretrain_source=hyperparams['pretrain_source'],
         **model_params,
@@ -213,8 +215,8 @@ def main():
     # default_out_features = trainingModel.fc.out_features
     # trainingModel.fc = nn.Sequential(trainingModel.fc, nn.ReLU(), nn.Linear(in_features=default_out_features, out_features=1, bias=True))
     trainingModel = trainingModel.to(device)
-    optimizer = torch.optim.Adam(trainingModel.parameters(),lr=hyperparams['optimizer_lr']) 
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=0.5, patience=10,min_lr=0.001, verbose=True) #Start at large learning rate to quickly learn and only reduce when loss plateaus
+    optimizer = torch.optim.AdamW(trainingModel.parameters(),lr=hyperparams['optimizer_lr']) 
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=0.1, patience=10,min_lr=0.0002, verbose=True) #Start at large learning rate to quickly learn and only reduce when loss plateaus
     loss_function = nn.MSELoss()
 
     hyperparams['resume_train'] = False 

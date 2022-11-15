@@ -1,13 +1,13 @@
 ### YAML file to easily specify and modify hyperparameters used in main_training_script ###
 
-experiment_name: "vgg16"
+experiment_name: "bilbily"
 saving_frequency: 5
-data_preprocess: true
 
 
 model:
-  name: "vgg16"
-  pretrained: true
+  name: "bilbily"
+  pretrained: false
+  sex_encoding: "onehot"
 
 pretrain_source: "imagenet"
 batch_size: 32
