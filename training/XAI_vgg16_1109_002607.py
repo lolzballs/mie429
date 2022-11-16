@@ -127,6 +127,7 @@ class Vgg16(nn.Module):
 model = Vgg16()
 model.load_state_dict(torch.load('vgg16-withpreprocessing_1109_002607.pt', map_location=torch.device('cpu')), strict=False)
 model.eval()
+print(model)
 # print(model.vgg16.features)
 # print("-------------------------- START --------------------------")
 # i = 1
