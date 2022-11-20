@@ -1,11 +1,16 @@
 import argparse
 import copy
+from typing import Tuple
 import yaml
 
 import torch
 import torchvision
 
 from model_loader import ModelManager
+
+
+def save_activations(module, _input: Tuple[torch.Tensor], output: torch.Tensor):
+    module.activations = output.data
 
 
 class ModelWithTransforms(torch.nn.Module):
@@ -16,6 +21,10 @@ class ModelWithTransforms(torch.nn.Module):
             'resize',
             'normalize',
         ]).transforms)
+
+        final_layer = model._modules.get('inception')._modules.get('Mixed_7c')
+        final_layer.activations = torch.zeros((1, 2048, 14, 14))
+        final_layer.register_forward_hook(save_activations)
 
     def forward(self, x: torch.Tensor, sex: torch.Tensor):
         with torch.no_grad():
