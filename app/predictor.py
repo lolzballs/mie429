@@ -51,6 +51,8 @@ class Predictor:
 
         self._model = torch.jit.load(model_path)
         self._model.eval()
+        self._model_final_layer = self._model._modules['model']\
+                ._modules['inception']._modules['Mixed_7c']
 
         self._running = True
         self._process_queue = queue.Queue()
@@ -92,7 +94,7 @@ class Predictor:
 
         image = torchvision.transforms.functional.to_tensor(image).unsqueeze(0)
         age = self._model(image, torch.tensor(sex).unsqueeze(0))
-        # TODO: XAI stuff
+        # TODO: XAI stuff using self._model_final_layer.activations
         heatmap = np.random.random_integers(128, 256, image.shape)
         return age, heatmap
 
