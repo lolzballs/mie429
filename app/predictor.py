@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw, ImageFont
 from pydicom.dataset import Dataset, FileMetaDataset
+from pydicom.pixel_data_handlers.util import apply_color_lut
 import pydicom.uid
 import torch
 import torchvision
@@ -57,7 +58,7 @@ class Predictor:
         self._running = True
         self._process_queue = queue.Queue()
         self._result_queue = queue.Queue()
-        self._font = ImageFont.load_default()
+        self._font = ImageFont.truetype("Arial.ttf", 125)
         self._workers = [_PredictorWorker(self, self._process_queue,
                                           self._result_queue)
                          for _ in range(num_workers)]
@@ -113,9 +114,6 @@ class Predictor:
         heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
         superimposed_img = heatmap * 0.4 + image * 0.6
         superimposed_img = superimposed_img.astype(np.uint8)
-        ### testing purposes
-        im = Image.fromarray(superimposed_img)
-        im.save("heatmap.png")
         return superimposed_img
     
     def _get_CAM(self, feature_conv, weight_fc, final_fc_weights) -> np.ndarray: # returns heatmap
@@ -166,7 +164,7 @@ class _PredictorWorker(threading.Thread):
 
         image = Image.fromarray(item.pixel_array, 'L')
         draw = ImageDraw.Draw(image)
-        draw.text((0, 0), f'{pred_int}', fill="#fff",
+        draw.text((50, 80), f'{pred_int} m', fill="#fff",
                   font=self._predictor._font, stroke_width=5, stroke_fill="#000")
 
         atlas_dir = 'app/atlas/male_atlas' if item.PatientSex == 'M' else 'app/atlas/female_atlas'
@@ -214,6 +212,7 @@ class _PredictorWorker(threading.Thread):
             bone_age = [3.02, 6.04, 9.05, 12.04, 18.22, 24.16, 30.96, 36.63, 43.50, 50.14, 60.06, 66.21, 78.50, 
                         89.30, 100.66, 113.86, 125.66, 137.86, 149.62, 162.28, 174.25, 183.62, 189.44]
 
+        fig = plt.figure(figsize=(20, 10))
         plt.plot(chronological_age, bone_age, color = 'r', linestyle = '--', marker='o', label = 'Brush Foundation Study')
         plt.plot(np.arange(0, max(chronological_age)+1), [pred_int] * (max(chronological_age)+1), color = 'b', linestyle = ':', label = 'prediction')
         plt.xlabel('Chronological Age [years]')
@@ -221,8 +220,12 @@ class _PredictorWorker(threading.Thread):
         plt.legend()
         plt.title('Bone Age Growth Chart')
         plt.savefig('chart.png')
-        growth_chart = np.array(Image.open('chart.png'))
-        # growth_chart = np.random.random_integers(128, 256, image.shape)
+        
+        # https://stackoverflow.com/questions/67955433/how-to-get-matplotlib-plot-data-as-numpy-array
+        canvas = plt.gca().figure.canvas
+        canvas.draw()
+        data = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8)
+        growth_chart = data.reshape(canvas.get_width_height()[::-1] + (3,))
 
         return Prediction(_create_dataset_for_image(item, 2, image_w_atlas),
                           _create_dataset_for_image(item, 3, heatmap),
@@ -248,7 +251,7 @@ def _create_dataset_for_image(original: Dataset, series_num: int,
     ds.InstanceNumber = '1'
 
     ds.SamplesPerPixel = 1
-    ds.PhotometricInterpretation = 'MONOCHROME2'
+    ds.PhotometricInterpretation = 'RGB' if series_num > 2 else 'MONOCHROME2'
     ds.Rows = image.shape[0]
     ds.Columns = image.shape[1]
     ds.BitsAllocated = 8
