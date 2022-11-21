@@ -1,15 +1,23 @@
 import copy
 import dataclasses
 import queue
+import os
 import threading
+import sys
 from typing import Optional, Tuple
 
+import cv2 as cv
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from pydicom.dataset import Dataset, FileMetaDataset
 import pydicom.uid
 import torch
 import torchvision
+
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             '..',
+                             'dataset_preprocessing'))
+from image_matcher import ImageMatcher
 
 
 # Our UID was obtained from Medical Connections
@@ -38,7 +46,9 @@ class Predictor:
     _result_queue: queue.Queue[Prediction]
     _model: torch.nn.Module
 
-    def __init__(self, model_path: str, num_workers: int):
+    def __init__(self, model_path: str, icon_path: str, num_workers: int):
+        self._image_matcher = ImageMatcher(cv.imread(icon_path))
+
         self._model = torch.jit.load(model_path)
         self._model.eval()
 
@@ -72,7 +82,14 @@ class Predictor:
 
     def _run_model(self, image: np.ndarray, sex: int) \
             -> Tuple[float, np.ndarray]:
-        # TODO: run through signature removal
+        # remove signatures
+        self._image_matcher.upload_search_image(image)
+        _, result_img = self._image_matcher.find_object(padding_X=125,
+                                                        padding_Y=175,
+                                                        draw_box=False)
+        if result_img is not None:
+            image = result_img
+
         image = torchvision.transforms.functional.to_tensor(image).unsqueeze(0)
         age = self._model(image, torch.tensor(sex).unsqueeze(0))
         # TODO: XAI stuff
