@@ -16,6 +16,7 @@ from pydicom.pixel_data_handlers.util import apply_color_lut
 import pydicom.uid
 import torch
 import torchvision
+from scipy import interpolate
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              '..',
@@ -213,13 +214,16 @@ class _PredictorWorker(threading.Thread):
                         89.30, 100.66, 113.86, 125.66, 137.86, 149.62, 162.28, 174.25, 183.62, 189.44]
 
         fig = plt.figure(figsize=(20, 10))
-        plt.plot(chronological_age, bone_age, color = 'r', linestyle = '--', marker='o', label = 'Brush Foundation Study')
-        plt.plot(np.arange(0, max(chronological_age)+1), [pred_int] * (max(chronological_age)+1), color = 'b', linestyle = ':', label = 'prediction')
+        plt.plot(chronological_age, bone_age, color = 'g', marker='o', linestyle = '--', label = 'Brush Foundation Study')
+        f = interpolate.interp1d(bone_age, chronological_age)
+        pred_int_x = f(pred_int)
+        plt.plot(pred_int_x, pred_int, color = 'r', marker = 'D', label = 'prediction')
+        # plt.plot(np.arange(0, max(chronological_age)+1), [pred_int] * (max(chronological_age)+1), color = 'b', linestyle = ':', label = 'prediction')
         plt.xlabel('Chronological Age [years]')
         plt.ylabel('Bone Age [months]')
-        plt.legend()
         plt.title('Bone Age Growth Chart')
-        plt.savefig('chart.png')
+        plt.grid(visible = True, which = 'both')
+        plt.legend()
         
         # https://stackoverflow.com/questions/67955433/how-to-get-matplotlib-plot-data-as-numpy-array
         canvas = plt.gca().figure.canvas
