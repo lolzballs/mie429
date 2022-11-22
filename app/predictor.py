@@ -6,17 +6,16 @@ import threading
 import sys
 from typing import Optional, Tuple
 
-import os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image, ImageDraw, ImageFont
 from pydicom.dataset import Dataset, FileMetaDataset
-from pydicom.pixel_data_handlers.util import apply_color_lut
 import pydicom.uid
+from scipy import interpolate
 import torch
 import torchvision
-from scipy import interpolate
+
+from atlas import Atlas
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              '..',
@@ -28,7 +27,7 @@ from image_matcher import ImageMatcher
 # Suballocated as follows:
 #   1. Series
 #   2. SOP
-# Each of the above are further suballocated as:       
+# Each of the above are further suballocated as:
 #   2. Prediction + Reference
 #   3. Heatmap
 #   4. Growth Chart
@@ -49,17 +48,19 @@ class Predictor:
     _result_queue: queue.Queue[Prediction]
     _model: torch.nn.Module
 
-    def __init__(self, model_path: str, icon_path: str, num_workers: int):
+    def __init__(self, model_path: str, atlas_path: str, icon_path: str,
+                 num_workers: int):
+        self._atlas = Atlas(atlas_path)
         self._image_matcher = ImageMatcher(cv2.imread(icon_path))
+
         self._model = torch.jit.load(model_path)
         self._model.eval()
         self._model_final_layer = self._model._modules['model']\
-                ._modules['inception']._modules['Mixed_7c']
+            ._modules['inception']._modules['Mixed_7c']
 
         self._running = True
         self._process_queue = queue.Queue()
         self._result_queue = queue.Queue()
-        self._font = ImageFont.truetype("Arial.ttf", 125)
         self._workers = [_PredictorWorker(self, self._process_queue,
                                           self._result_queue)
                          for _ in range(num_workers)]
@@ -85,7 +86,7 @@ class Predictor:
         self._result_queue.join()
 
     def _run_model(self, image: np.ndarray, sex: int) \
-            -> Tuple[float, np.ndarray]:
+            -> Tuple[torch.Tensor, np.ndarray]:
         # remove signatures
         self._image_matcher.upload_search_image(image)
         _, result_img = self._image_matcher.find_object(padding_X=125,
@@ -95,7 +96,6 @@ class Predictor:
             image = result_img
 
         image = torchvision.transforms.functional.to_tensor(image).unsqueeze(0)
-
         # for XAI
         age = self._model(image, torch.tensor(sex).unsqueeze(0))
         # TODO: XAI stuff using self._model_final_layer.activations
@@ -162,44 +162,9 @@ class _PredictorWorker(threading.Thread):
         )
 
         pred_int = torch.round(prediction).int().item()
-
-        image = Image.fromarray(item.pixel_array, 'L')
-        draw = ImageDraw.Draw(image)
-        draw.text((50, 80), f'{pred_int} m', fill="#fff",
-                  font=self._predictor._font, stroke_width=5, stroke_fill="#000")
-
-        atlas_dir = 'app/atlas/male_atlas' if item.PatientSex == 'M' else 'app/atlas/female_atlas'
-        atlas_imgs = os.listdir(atlas_dir)
-        atlas_nums = np.array([int(x.split('.')[0]) for x in atlas_imgs if x.split('.')[1] == 'png'])
-        atlas_nums.sort()
-        closest_idx = (np.abs(atlas_nums - pred_int)).argmin() #https://stackoverflow.com/questions/2566412/find-nearest-value-in-numpy-array
-        closest_val = atlas_nums[closest_idx]
-        if closest_val > pred_int:
-            more_idx = closest_idx
-            less_idx = closest_idx - 1
-        else:
-            more_idx = closest_idx + 1
-            less_idx = closest_idx
-        less_val = atlas_nums[less_idx]
-        less_img = Image.open(atlas_dir + "/" + str(less_val) + '.png')
-        less_img = less_img.resize((image.size[1], image.size[1]))
-        more_val = atlas_nums[more_idx]
-        more_img = Image.open(atlas_dir + "/" + str(more_val) + '.png')
-        more_img = more_img.resize((image.size[1], image.size[1]))
-
-        images = [less_img, image, more_img] #https://stackoverflow.com/questions/30227466/combine-several-images-horizontally-with-python
-        widths, heights = zip(*(i.size for i in images))
-        total_width = sum(widths)
-        max_height = max(heights)
-        image_w_atlas = Image.new('L', (total_width, max_height))
-
-        x_offset = 0
-        for im in images:
-            image_w_atlas.paste(im, (x_offset,0))
-            x_offset += im.size[0]
-
-        image_w_atlas = np.array(image_w_atlas)
-        image = np.array(image)
+        image_w_atlas = self._predictor._atlas.render(item.pixel_array,
+                                                      item.PatientSex,
+                                                      pred_int)
 
         # quick google search shows that chronological age in years- we can check this later
         # female chart goes up to 16
@@ -207,10 +172,10 @@ class _PredictorWorker(threading.Thread):
         if item.PatientSex == 'M':
             chronological_age.append(17)
             # bone age in months according to graph??
-            bone_age = [3.01, 6.09, 9.56, 12.74, 19.36, 25.97, 32.40, 38.21, 43.89, 49.04, 56.00, 62.43, 75.46, 
+            bone_age = [3.01, 6.09, 9.56, 12.74, 19.36, 25.97, 32.40, 38.21, 43.89, 49.04, 56.00, 62.43, 75.46,
                         88.20, 101.38, 113.90, 125.68, 137.32, 148.82, 158.39, 170.02, 182.72, 195.32, 206.21]
         else:
-            bone_age = [3.02, 6.04, 9.05, 12.04, 18.22, 24.16, 30.96, 36.63, 43.50, 50.14, 60.06, 66.21, 78.50, 
+            bone_age = [3.02, 6.04, 9.05, 12.04, 18.22, 24.16, 30.96, 36.63, 43.50, 50.14, 60.06, 66.21, 78.50,
                         89.30, 100.66, 113.86, 125.66, 137.86, 149.62, 162.28, 174.25, 183.62, 189.44]
 
         fig = plt.figure(figsize=(20, 10))
@@ -224,7 +189,7 @@ class _PredictorWorker(threading.Thread):
         plt.title('Bone Age Growth Chart')
         plt.grid(visible = True, which = 'both')
         plt.legend()
-        
+
         # https://stackoverflow.com/questions/67955433/how-to-get-matplotlib-plot-data-as-numpy-array
         canvas = plt.gca().figure.canvas
         canvas.draw()
