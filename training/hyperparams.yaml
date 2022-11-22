@@ -1,8 +1,7 @@
 ### YAML file to easily specify and modify hyperparameters used in main_training_script ###
 
-experiment_name: "bilbily"
+experiment_name: "bilbily_jayce_setup_nocontrastadj"
 saving_frequency: 5
-
 
 model:
   name: "bilbily"
@@ -14,3 +13,13 @@ batch_size: 32
 num_epochs: 200
 
 optimizer_lr: 0.01
+
+scheduler_params:
+  factor: 0.2
+  patience: 10
+  min_lr: 0.0001
+  cooldown: 0
+
+train_image_transforms: ["resize","normalize","gaussiannoise","random_affine"]
+val_image_transforms: ["resize","normalize"]
+  
