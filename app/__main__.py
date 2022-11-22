@@ -26,7 +26,9 @@ if __name__ == '__main__':
     study_instance_uids = []
 
     thread_count = os.cpu_count()
-    predictor = Predictor('bilbily.pt', 'dataset_preprocessing/icon.png',
+    predictor = Predictor('bilbily.pt',
+                          'app/atlas',
+                          'dataset_preprocessing/icon.png',
                           thread_count if thread_count is not None else 2)
     ae = pynetdicom.AE()
 
