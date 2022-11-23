@@ -8,7 +8,6 @@ from typing import Optional, Tuple
 
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 from pydicom.dataset import Dataset, FileMetaDataset
 import pydicom.uid
 from scipy import interpolate
@@ -16,6 +15,7 @@ import torch
 import torchvision
 
 from atlas import Atlas
+from growth_chart import GrowthChart, GrowthChartInput
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              '..',
@@ -52,6 +52,7 @@ class Predictor:
                  num_workers: int):
         self._atlas = Atlas(atlas_path)
         self._image_matcher = ImageMatcher(cv2.imread(icon_path))
+        self._growth_chart = GrowthChart()
 
         self._model = torch.jit.load(model_path)
         self._model.eval()
@@ -84,6 +85,7 @@ class Predictor:
             worker.join()
 
         self._result_queue.join()
+        self._growth_chart.stop()
 
     def _run_model(self, image: np.ndarray, sex: int) \
             -> Tuple[torch.Tensor, np.ndarray]:
@@ -127,6 +129,7 @@ class Predictor:
         cam_img = cam / np.max(cam)
         return cam_img
 
+
 class _PredictorWorker(threading.Thread):
     def __init__(self, predictor: Predictor, in_queue: queue.Queue[Dataset],
                  out_queue: queue.Queue[Prediction]):
@@ -166,39 +169,11 @@ class _PredictorWorker(threading.Thread):
                                                       item.PatientSex,
                                                       pred_int)
 
-        # quick google search shows that chronological age in years- we can check this later
-        # female chart goes up to 16
-        chronological_age = [3/12, 6/12, 9/12, 12/12, 18/12, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-        if item.PatientSex == 'M':
-            chronological_age.append(17)
-            # bone age in months according to graph??
-            bone_age = [3.01, 6.09, 9.56, 12.74, 19.36, 25.97, 32.40, 38.21, 43.89, 49.04, 56.00, 62.43, 75.46,
-                        88.20, 101.38, 113.90, 125.68, 137.32, 148.82, 158.39, 170.02, 182.72, 195.32, 206.21]
-        else:
-            bone_age = [3.02, 6.04, 9.05, 12.04, 18.22, 24.16, 30.96, 36.63, 43.50, 50.14, 60.06, 66.21, 78.50,
-                        89.30, 100.66, 113.86, 125.66, 137.86, 149.62, 162.28, 174.25, 183.62, 189.44]
-
-        fig = plt.figure(figsize=(20, 10))
-        plt.plot(chronological_age, bone_age, color = 'g', marker='o', linestyle = '--', label = 'Brush Foundation Study')
-        f = interpolate.interp1d(bone_age, chronological_age)
-        pred_int_x = f(pred_int)
-        plt.plot(pred_int_x, pred_int, color = 'r', marker = 'D', label = 'prediction')
-        # plt.plot(np.arange(0, max(chronological_age)+1), [pred_int] * (max(chronological_age)+1), color = 'b', linestyle = ':', label = 'prediction')
-        plt.xlabel('Chronological Age [years]')
-        plt.ylabel('Bone Age [months]')
-        plt.title('Bone Age Growth Chart')
-        plt.grid(visible = True, which = 'both')
-        plt.legend()
-
-        # https://stackoverflow.com/questions/67955433/how-to-get-matplotlib-plot-data-as-numpy-array
-        canvas = plt.gca().figure.canvas
-        canvas.draw()
-        data = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8)
-        growth_chart = data.reshape(canvas.get_width_height()[::-1] + (3,))
+        chart = self._predictor._growth_chart.plot_chart(GrowthChartInput(item.PatientSex, pred_int))
 
         return Prediction(_create_dataset_for_image(item, 2, image_w_atlas),
                           _create_dataset_for_image(item, 3, heatmap),
-                          _create_dataset_for_image(item, 4, growth_chart))
+                          _create_dataset_for_image(item, 4, chart))
 
 
 def _create_dataset_for_image(original: Dataset, series_num: int,

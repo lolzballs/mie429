@@ -1,5 +1,6 @@
 import os
 
+import matplotlib
 import pydicom.uid
 from pydicom.dataset import Dataset
 import pynetdicom
@@ -22,6 +23,8 @@ def handle_store(event: pynetdicom.evt.Event):
 if __name__ == '__main__':
     if os.environ.get('debug') is not None:
         pynetdicom.debug_logger()
+
+    matplotlib.use('agg')
 
     study_instance_uids = []
 
