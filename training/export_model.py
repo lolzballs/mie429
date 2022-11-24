@@ -17,10 +17,8 @@ class ModelWithTransforms(torch.nn.Module):
     def __init__(self, model: torch.nn.Module):
         super().__init__()
         self.model = model
-        self.transforms = torch.nn.Sequential(*model_manager.get_data_transform([
-            'resize',
-            'normalize',
-        ]).transforms)
+        self.resize_transform = model_manager.get_data_transform(['resize']).transforms[0]
+        self.normalize_transform = model_manager.get_data_transform(['normalize']).transforms[0]
 
         final_layer = model._modules.get('inception')._modules.get('Mixed_7c')
         final_layer.activations = torch.zeros((1, 2048, 14, 14))
@@ -28,8 +26,9 @@ class ModelWithTransforms(torch.nn.Module):
 
     def forward(self, x: torch.Tensor, sex: torch.Tensor):
         with torch.no_grad():
-            x = self.transforms(x)
+            x = self.resize_transform(x)
             x = torchvision.transforms.functional.adjust_contrast(x, contrast_factor=1.2)
+            x = self.normalize_transform(x)
         return self.model(x, sex)
 
 
@@ -52,7 +51,7 @@ if __name__ == "__main__":
         model_name=hp['model']['name'],
         **model_params,
     )
-    model.load_state_dict(torch.load(args.pt, map_location=torch.device('cpu'))['model_state_dict'])
+    model.load_state_dict(torch.load(args.pt, map_location=torch.device('cpu')))
 
     model_with_transforms = ModelWithTransforms(model)
     model_with_transforms.eval()

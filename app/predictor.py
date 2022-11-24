@@ -94,14 +94,13 @@ class Predictor:
         _, result_img = self._image_matcher.find_object(padding_X=125,
                                                         padding_Y=175,
                                                         draw_box=False)
+        original_image = torchvision.transforms.functional.to_tensor(image).unsqueeze(0)
         if result_img is not None:
             image = result_img
 
         image = torchvision.transforms.functional.to_tensor(image).unsqueeze(0)
-        # for XAI
-        age = self._model(image, torch.tensor(sex).unsqueeze(0))
-        # TODO: XAI stuff using self._model_final_layer.activations
-        heatmap = self._get_heatmap(image, self._model_final_layer.activations)
+        age = self._model(image, torch.tensor(sex).unsqueeze(0).float())
+        heatmap = self._get_heatmap(original_image, self._model_final_layer.activations)
         return age, heatmap
 
     def _get_heatmap(self, image, activated_features) -> np.ndarray:
