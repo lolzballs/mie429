@@ -8,6 +8,13 @@ from predictor import Predictor
 from dicom import SCP, SCU
 
 
+MODEL_LOCATION             = 'bilbily.pt'
+ATLAS_LOCATION             = 'app/atlas'
+EXAMPLE_SIGNATURE_LOCATION = 'dataset_preprocessing/icon.png'
+SCP_BIND_ADDRESS           = ('0.0.0.0', 4242)
+REMOTE_DICOM_SERVER        = ('15.222.138.226', 4242)
+
+
 def sigint_handler(signum, stack_frame):
     global stopping
     if not stopping:
@@ -30,16 +37,16 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, sigint_handler)
 
     thread_count = os.cpu_count()
-    predictor = Predictor('bilbily.pt',
-                          'app/atlas',
-                          'dataset_preprocessing/icon.png',
+    predictor = Predictor(MODEL_LOCATION,
+                          ATLAS_LOCATION,
+                          EXAMPLE_SIGNATURE_LOCATION,
                           thread_count if thread_count is not None else 2)
 
-    scu = SCU(predictor, ('15.222.138.226', 4242))
+    scu = SCU(predictor, REMOTE_DICOM_SERVER)
     scu.start()
 
     scp = SCP(predictor)
-    scp.start(('0.0.0.0', 4242))
+    scp.start(SCP_BIND_ADDRESS)
 
     # block until scu thread exists
     scu.join()
