@@ -15,6 +15,19 @@ BONE_AGE = {
     'M': [3.01, 6.09, 9.56, 12.74, 19.36, 25.97, 32.40, 38.21, 43.89, 49.04, 56.00, 62.43, 75.46, 88.20, 101.38, 113.90, 125.68, 137.32, 148.82, 158.39, 170.02, 182.72, 195.32, 206.21],
     'F': [3.02, 6.04, 9.05, 12.04, 18.22, 24.16, 30.96, 36.63, 43.50, 50.14, 60.06, 66.21, 78.50, 89.30, 100.66, 113.86, 125.66, 137.86, 149.62, 162.28, 174.25, 183.62, 189.44]
 }
+STD_DEV = {
+    'M': [0.69, 1.13, 1.43, 1.97, 3.52, 3.92, 4.52, 5.08, 5.40, 6.66, 8.36, 8.79, 9.17, 8.91, 9.10, 9.00, 9.79, 10.09, 10.38, 10.44, 10.72, 11.32, 12.86, 13.05],
+    'F': [0.72, 1.16, 1.36, 1.77, 3.49, 4.64, 5.37, 5.97, 7.48, 8.98, 10.73, 11.65, 10.23, 9.64, 10.23, 10.74, 11.73, 11.94, 10.24, 10.67, 11.30, 9.23, 7.31]
+}
+
+STD_DEV_LOW = {}
+STD_DEV_HIGH = {}
+
+for sex, vals in BONE_AGE.items():
+    in_years = [month/12 for month in vals]
+    BONE_AGE[sex] = in_years
+    STD_DEV_LOW[sex] = [age - sd for age, sd in zip(BONE_AGE[sex], STD_DEV[sex])]
+    STD_DEV_HIGH[sex] = [age + sd for age, sd in zip(BONE_AGE[sex], STD_DEV[sex])]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -56,24 +69,40 @@ class GrowthChart:
             except queue.Empty:
                 continue
             
-            fig = plt.figure(figsize=(20, 10))
+            fig = plt.figure(figsize=(20, 20))
+            fig.patch.set_facecolor('k')
             plt.plot(CHRONOLOGICAL_AGE[input.sex],
                      BONE_AGE[input.sex],
-                     color = 'g', marker='o', linestyle = '--',
+                     color = 'g', marker='o', markersize=14, linestyle = '--',
                      label = 'Brush Foundation Study')
-            f = scipy.interpolate.interp1d(BONE_AGE[input.sex], CHRONOLOGICAL_AGE[input.sex])
-            pred_int_x = f(input.bone_age)
-            plt.plot(pred_int_x, input.bone_age,
-                     color = 'r', marker = 'D', label = 'prediction')
-            # plt.plot(np.arange(0, max(chronological_age)+1), [pred_int] * (max(chronological_age)+1), color = 'b', linestyle = ':', label = 'prediction')
-            plt.xlabel('Chronological Age [years]')
-            plt.ylabel('Bone Age [months]')
-            plt.title('Bone Age Growth Chart')
-            plt.grid(visible = True, which = 'both')
-            plt.legend()
+            plt.plot(CHRONOLOGICAL_AGE[input.sex],
+                     STD_DEV_LOW[input.sex],
+                     color = 'b', marker='o', markersize=14, linestyle = '--',
+                     label = 'Brush Foundation Study - lower bound')
+            plt.plot(CHRONOLOGICAL_AGE[input.sex],
+                     STD_DEV_HIGH[input.sex],
+                     color = 'b', marker='o', markersize=14, linestyle = '--',
+                     label = 'Brush Foundation Study- higher bound')
 
+            plt.plot(np.arange(0, max(CHRONOLOGICAL_AGE[input.sex])+1), [input.bone_age/12] * (max(CHRONOLOGICAL_AGE[input.sex])+1), color = 'r', linestyle = ':', label = 'prediction')
+
+            # f = scipy.interpolate.interp1d(BONE_AGE[input.sex], CHRONOLOGICAL_AGE[input.sex])
+            # pred_int_x = f(input.bone_age/12) # change input to years for interpolation
+            # plt.plot(pred_int_x, input.bone_age/12, # change output to years for graphing
+            #          color = 'r', marker = 'D', markersize=14,  label = 'prediction')
+            plt.grid(visible = True, which = 'both')
+            plt.legend(fontsize=20)
+
+            ax = plt.gca()
+            ax.set_xlabel('Chronological Age [years]', color = 'w', fontdict={'fontsize': 20})
+            ax.tick_params(axis='x', colors = 'w', labelsize = 18)
+            ax.set_ylabel('Bone Age [years]', color = 'w', fontdict={'fontsize': 20})
+            ax.tick_params(axis='y', colors = 'w', labelsize = 18)
+            ax.set_title('Bone Age Growth Chart', color = 'w', fontdict={'fontsize': 24})
+            ax.set_facecolor('k')
+            ax.grid(True, which='both')
             # https://stackoverflow.com/questions/67955433/how-to-get-matplotlib-plot-data-as-numpy-array
-            canvas = plt.gca().figure.canvas
+            canvas = ax.figure.canvas
             canvas.draw()
             data = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8)
             growth_chart = data.reshape(canvas.get_width_height()[::-1] + (3,))
