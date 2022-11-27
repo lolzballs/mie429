@@ -10,7 +10,6 @@ import cv2
 import numpy as np
 from pydicom.dataset import Dataset, FileMetaDataset
 import pydicom.uid
-from scipy import interpolate
 import torch
 import torchvision
 
@@ -72,8 +71,8 @@ class Predictor:
     def predict(self, dataset: Dataset):
         self._process_queue.put(dataset)
 
-    def get_result(self):
-        item = self._result_queue.get()
+    def get_result(self, timeout: Optional[int] = None):
+        item = self._result_queue.get(timeout=timeout)
         self._result_queue.task_done()
         return item
 
