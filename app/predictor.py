@@ -21,6 +21,47 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              'dataset_preprocessing'))
 from image_matcher import ImageMatcher
 
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             '..',
+                             'training'))
+from model_loader import ModelManager
+
+
+class ModelWithTransforms(torch.nn.Module):
+    layer_b_gradients: Optional[torch.Tensor]
+    layer_b_outputs: Optional[torch.Tensor]
+
+    def __init__(self, model: torch.nn.Module):
+        super().__init__()
+        model_manager = ModelManager()
+
+        self.model = model
+        self._resize_transform = model_manager.get_data_transform(['resize']).transforms[0]
+        self._normalize_transform = model_manager.get_data_transform(['normalize']).transforms[0]
+
+        self._mse_loss = torch.nn.MSELoss()
+
+        self.layer_b_gradients = None
+        self.layer_b_outputs = None
+
+        model_final_layer = self.model._modules['inception']\
+            ._modules['Mixed_7b']
+        model_final_layer.register_forward_hook(self._save_gradient)
+
+    def forward(self, x: torch.Tensor, sex: torch.Tensor):
+        with torch.no_grad():
+            x = self._resize_transform(x)
+            x = torchvision.transforms.functional.adjust_contrast(x, contrast_factor=1.2)
+            x = self._normalize_transform(x)
+        return self.model(x, sex)
+
+    def _save_gradient(self, module, input, output):
+        def _store_grad(grad):
+            self.layer_b_gradients = grad
+
+        self.layer_b_outputs = output
+        output.register_hook(_store_grad)
+
 
 # Our UID was obtained from Medical Connections
 # Suballocated as follows:
@@ -53,10 +94,8 @@ class Predictor:
         self._image_matcher = ImageMatcher(cv2.imread(icon_path))
         self._growth_chart = GrowthChart()
 
-        self._model = torch.jit.load(model_path)
+        self._model = ModelWithTransforms(torch.load(model_path))
         self._model.eval()
-        self._model_final_layer = self._model._modules['model']\
-            ._modules['inception']._modules['Mixed_7c']
 
         self._running = True
         self._process_queue = queue.Queue()
@@ -98,18 +137,19 @@ class Predictor:
             image = result_img
 
         image = torchvision.transforms.functional.to_tensor(image).unsqueeze(0)
-        age = self._model(image, torch.tensor(sex).unsqueeze(0).float())
-        heatmap = self._get_heatmap(original_image, self._model_final_layer.activations)
+        with torch.set_grad_enabled(True):
+            age = self._model(image, torch.tensor(sex).unsqueeze(0).float())
+            age.backward()
+
+        heatmap = self._get_heatmap(original_image,
+                                    self._model.layer_b_gradients.detach(),
+                                    self._model.layer_b_outputs.detach())
         return age, heatmap
 
-    def _get_heatmap(self, image, activated_features) -> np.ndarray:
-        weight_softmax_params = list(self._model._modules['model']._modules['fc'].parameters())
-        weight_softmax = np.squeeze(weight_softmax_params[0].cpu().data.numpy())
-        final_fc_weights = weight_softmax_params[2].data.numpy()
-
+    def _get_heatmap(self, image, grad: torch.Tensor, outputs: torch.Tensor) -> np.ndarray:
         image = image.expand(-1,3,-1,-1).squeeze().numpy().transpose((1, 2, 0))
         image = image * 255
-        heatmap_only = self._get_CAM(activated_features, weight_softmax, final_fc_weights)
+        heatmap_only = self._get_CAM(grad, outputs)
         heatmap = cv2.resize(heatmap_only, (image.shape[1], image.shape[0]))
         heatmap = np.uint8(255 * heatmap)
         heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
@@ -117,11 +157,15 @@ class Predictor:
         superimposed_img = superimposed_img.astype(np.uint8)
         return superimposed_img
     
-    def _get_CAM(self, feature_conv, weight_fc, final_fc_weights) -> np.ndarray: # returns heatmap
-        _, nc, h, w = feature_conv.shape
-        cam = weight_fc[:,None,:nc].dot(feature_conv.reshape((-1, nc, h*w))).squeeze()
-        cam = cam.T@final_fc_weights.T
+    def _get_CAM(self, grad: torch.Tensor, outputs: torch.Tensor) -> np.ndarray: # returns heatmap
+        _, nc, h, w = grad.shape
+        guided_grad = torch.nn.functional.relu(outputs) * \
+            torch.nn.functional.relu(grad) * grad
+        self.guided_grad = guided_grad
+        weights = guided_grad.reshape(nc, h * w).mean(dim=1)
+        cam = weights.T @ outputs.reshape(nc, h * w)
         cam = cam.reshape(h, w)
+        cam = cam.numpy()
         
         cam = cam - np.min(cam)
         cam_img = cam / np.max(cam)
