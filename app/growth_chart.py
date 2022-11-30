@@ -4,6 +4,7 @@ import threading
 
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 import scipy
 
 
@@ -20,14 +21,17 @@ STD_DEV = {
     'F': [0.72, 1.16, 1.36, 1.77, 3.49, 4.64, 5.37, 5.97, 7.48, 8.98, 10.73, 11.65, 10.23, 9.64, 10.23, 10.74, 11.73, 11.94, 10.24, 10.67, 11.30, 9.23, 7.31]
 }
 
-STD_DEV_LOW = {}
-STD_DEV_HIGH = {}
+BOUND_LOW = {}
+BOUND_HIGH = {}
 
 for sex, vals in BONE_AGE.items():
     in_years = [month/12 for month in vals]
     BONE_AGE[sex] = in_years
-    STD_DEV_LOW[sex] = [age - sd for age, sd in zip(BONE_AGE[sex], STD_DEV[sex])]
-    STD_DEV_HIGH[sex] = [age + sd for age, sd in zip(BONE_AGE[sex], STD_DEV[sex])]
+
+for sex, vals in STD_DEV.items():
+    sd_years = [month/12 for month in vals]
+    BOUND_LOW[sex] = [age - 2*sd if (age - 2*sd) > 0 else 0 for age, sd in zip(CHRONOLOGICAL_AGE[sex], sd_years)]
+    BOUND_HIGH[sex] = [age + 2*sd for age, sd in zip(CHRONOLOGICAL_AGE[sex], sd_years)]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -76,31 +80,36 @@ class GrowthChart:
                      color = 'g', marker='o', markersize=14, linestyle = '--',
                      label = 'Brush Foundation Study')
             plt.plot(CHRONOLOGICAL_AGE[input.sex],
-                     STD_DEV_LOW[input.sex],
+                     BOUND_LOW[input.sex],
                      color = 'b', marker='o', markersize=14, linestyle = '--',
                      label = 'Brush Foundation Study - lower bound')
             plt.plot(CHRONOLOGICAL_AGE[input.sex],
-                     STD_DEV_HIGH[input.sex],
+                     BOUND_HIGH[input.sex],
                      color = 'b', marker='o', markersize=14, linestyle = '--',
-                     label = 'Brush Foundation Study- higher bound')
+                     label = 'Brush Foundation Study - upper bound')
 
-            plt.plot(np.arange(0, max(CHRONOLOGICAL_AGE[input.sex])+1), [input.bone_age/12] * (max(CHRONOLOGICAL_AGE[input.sex])+1), color = 'r', linestyle = ':', label = 'prediction')
+            plt.plot(np.arange(0, max(CHRONOLOGICAL_AGE[input.sex])+1), [input.bone_age/12] * (max(CHRONOLOGICAL_AGE[input.sex])+1),
+                    color = 'r', linestyle = ':', linewidth = 4, label = 'prediction')
 
             # f = scipy.interpolate.interp1d(BONE_AGE[input.sex], CHRONOLOGICAL_AGE[input.sex])
             # pred_int_x = f(input.bone_age/12) # change input to years for interpolation
             # plt.plot(pred_int_x, input.bone_age/12, # change output to years for graphing
             #          color = 'r', marker = 'D', markersize=14,  label = 'prediction')
             plt.grid(visible = True, which = 'both')
+            plt.yticks()
             plt.legend(fontsize=20)
 
             ax = plt.gca()
             ax.set_xlabel('Chronological Age [years]', color = 'w', fontdict={'fontsize': 20})
+            ax.set_xticks(np.arange(0, max(CHRONOLOGICAL_AGE[input.sex]) + 1))
             ax.tick_params(axis='x', colors = 'w', labelsize = 18)
             ax.set_ylabel('Bone Age [years]', color = 'w', fontdict={'fontsize': 20})
+            ax.set_yticks(np.arange(0, math.ceil(max(BOUND_HIGH[input.sex])) + 1))
             ax.tick_params(axis='y', colors = 'w', labelsize = 18)
             ax.set_title('Bone Age Growth Chart', color = 'w', fontdict={'fontsize': 24})
             ax.set_facecolor('k')
             ax.grid(True, which='both')
+            
             # https://stackoverflow.com/questions/67955433/how-to-get-matplotlib-plot-data-as-numpy-array
             canvas = ax.figure.canvas
             canvas.draw()
