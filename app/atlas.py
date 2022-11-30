@@ -13,7 +13,7 @@ class Atlas:
         }
         self._atlas_nums = {sex: _get_atlas_nums(path)
                             for sex, path in self._atlas_paths.items()}
-        self._font = ImageFont.truetype("Arial.ttf", 125)
+        self._font = ImageFont.truetype("Arial.ttf", 100)
 
     def render(self, original_xray: np.ndarray, sex: str,
                age: int) -> np.ndarray:
@@ -21,7 +21,8 @@ class Atlas:
 
         image = Image.fromarray(original_xray, 'L')
         draw = ImageDraw.Draw(image)
-        draw.text((50, 80), f'{age} m', fill="#fff",
+        age_years, age_months = divmod(age, 12)
+        draw.text((50, 80), f'{age_years}y {age_months}m', fill="#fff",
                   font=self._font, stroke_width=5, stroke_fill="#000")
 
         less_img = Image.open(os.path.join(self._atlas_paths[sex], f'{less_val}.png'))
