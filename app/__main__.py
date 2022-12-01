@@ -36,7 +36,8 @@ if __name__ == '__main__':
     stopping = False
     signal.signal(signal.SIGINT, sigint_handler)
 
-    thread_count = os.cpu_count()
+    # XAI requires model to be stored per-thread, so it'll cost too much RAM
+    thread_count = 1
     predictor = Predictor(MODEL_LOCATION,
                           ATLAS_LOCATION,
                           EXAMPLE_SIGNATURE_LOCATION,
