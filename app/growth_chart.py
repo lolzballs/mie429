@@ -1,6 +1,7 @@
 import dataclasses
 import queue
 import threading
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,6 +39,7 @@ for sex, vals in STD_DEV.items():
 class GrowthChartInput:
     sex: str
     bone_age: int
+    chronological_age: Optional[int]
 
 
 class GrowthChart:
