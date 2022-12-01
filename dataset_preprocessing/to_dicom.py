@@ -38,6 +38,7 @@ def generate_dataset(image_folder: str, patient_id: str, sex: bool,
     ds.PatientName = f'RSNA {patient_id}'
     ds.PatientID = f'RSNA-{patient_id}'
     ds.PatientSex = 'M' if sex else 'F'
+    ds.PatientBirthDate = '20001202'
     ds.ImageComments = bone_age
     ds.StudyID = ''
     ds.SeriesNumber = '1'
