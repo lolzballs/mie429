@@ -1,5 +1,6 @@
 import copy
 import dataclasses
+import datetime
 import queue
 import os
 import threading
@@ -8,6 +9,7 @@ from typing import Optional, Tuple
 
 import cv2
 import numpy as np
+import pydicom.valuerep
 from pydicom.dataset import Dataset, FileMetaDataset
 import pydicom.uid
 import torch
@@ -211,7 +213,10 @@ class _PredictorWorker(threading.Thread):
                                                       item.PatientSex,
                                                       pred_int)
 
-        chart = self._predictor._growth_chart.plot_chart(GrowthChartInput(item.PatientSex, pred_int))
+        patient_age = _get_patient_age(item)
+        chart = self._predictor._growth_chart.plot_chart(
+                GrowthChartInput(item.PatientSex, pred_int, patient_age)
+        )
 
         return Prediction(_create_dataset_for_image(item, 2, image_w_atlas),
                           _create_dataset_for_image(item, 3, heatmap),
@@ -251,3 +256,24 @@ def _create_dataset_for_image(original: Dataset, series_num: int,
     ds.is_little_endian = True
 
     return ds
+
+def _get_patient_age(item: Dataset) -> Optional[int]:
+    try:
+        if 'PatientBirthDate' in item:
+            birth_date = pydicom.valuerep.DA(item['PatientBirthDate'].value)
+            today = datetime.date.today()
+
+            # calculate the patient's age in months by:
+            # 1. start with years since birth year * 12
+            # 2. add/subtract months based on the month difference
+            # 3. if a month is incomplete, subject 1 month
+            age = (today.year - birth_date.year) * 12
+            age += today.month - birth_date.month
+            if today.day < birth_date.day:
+                age -= 1
+            return age
+    except Exception as e:  # we tried our best :(
+        print(e)
+        return None
+
+    return None
