@@ -90,13 +90,24 @@ class GrowthChart:
                      color = 'b', marker='o', markersize=14, linestyle = '--',
                      label = 'Brush Foundation Study - upper bound')
 
-            plt.plot(np.arange(0, max(CHRONOLOGICAL_AGE[input.sex])+1), [input.bone_age/12] * (max(CHRONOLOGICAL_AGE[input.sex])+1),
-                    color = 'r', linestyle = ':', linewidth = 4, label = 'prediction')
+            if input.chronological_age is None:
+                # draw a line if we don't have the patient's age
+                plt.plot(np.arange(0, max(CHRONOLOGICAL_AGE[input.sex]) + 1),
+                         [input.bone_age / 12] * (max(CHRONOLOGICAL_AGE[input.sex]) + 1),
+                         color = 'r', linestyle = ':', linewidth = 4, label = 'prediction')
+            else:
+                # draw dot
+                plt.plot(input.chronological_age / 12, input.bone_age / 12,
+                         color = 'r', marker = 'D', label = 'prediction')
+                # vertical line to the dot 
+                plt.plot([0, input.chronological_age / 12],
+                         [input.bone_age / 12] * 2,
+                         color = 'w', linestyle = '--', linewidth = 2)
+                # horizontal line to the dot 
+                plt.plot([input.chronological_age / 12] * 2,
+                         [0, input.bone_age / 12],
+                         color = 'w', linestyle = '--', linewidth = 2)
 
-            # f = scipy.interpolate.interp1d(BONE_AGE[input.sex], CHRONOLOGICAL_AGE[input.sex])
-            # pred_int_x = f(input.bone_age/12) # change input to years for interpolation
-            # plt.plot(pred_int_x, input.bone_age/12, # change output to years for graphing
-            #          color = 'r', marker = 'D', markersize=14,  label = 'prediction')
             plt.grid(visible = True, which = 'both')
             plt.yticks()
             plt.legend(fontsize=20)
