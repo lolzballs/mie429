@@ -216,8 +216,10 @@ def main():
 
     modelManager = ModelManager()
 
+
     train_transforms = modelManager.get_data_transform(hyperparams['train_image_transforms'])
     val_transforms = modelManager.get_data_transform(hyperparams['val_image_transforms'])
+
     train_dp, val_dp = data.RSNA(root=args.data)
     train_dp = train_dp.map(apply_to_image(train_transforms))
     val_dp = val_dp.map(apply_to_image(val_transforms))
@@ -242,6 +244,7 @@ def main():
                                                                     min_lr=hyperparams['scheduler_params']['min_lr'], 
                                                                     cooldown=hyperparams['scheduler_params']['cooldown'],
                                                                     verbose=True) #Start at large learning rate to quickly learn and only reduce when loss plateaus
+
     loss_function = nn.MSELoss()
 
     hyperparams['resume_train'] = False 

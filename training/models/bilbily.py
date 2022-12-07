@@ -49,7 +49,6 @@ class Bilbily(nn.Module):
         if not pretrained:
             self.apply(utils.apply_to_nn(torch.nn.init.orthogonal_))
 
-
     def forward(self, x, sex):
         if self.sex_encoding == 'onehot':
             sex = nn.functional.one_hot(sex.long(), 2).float()
@@ -61,6 +60,8 @@ class Bilbily(nn.Module):
         x = self.inception(x)
         sex = self.sex_fc(sex)
 
+        if torch.jit.is_scripting():
+            x = x.logits
         x = torch.cat((x, sex), 1)
         x = self.fc(x)
         return x
