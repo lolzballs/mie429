@@ -16,9 +16,10 @@ from datetime import datetime
 import os 
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import pandas as pd
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler, dataloaders,hp,args):
+def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler, dataloaders,hp,args,val_df):
     since = time.time()
     train_loss_store,val_loss_store,train_mae_store,val_mae_store = [],[],[],[]
     best_model_wts = copy.deepcopy(model.state_dict())
@@ -51,9 +52,8 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
             max_estimated_error = 0
             for batch_iter, (patient_id, bone_age, sex, img_batch) in enumerate(tqdm(dataloaders[phase])):
                 bone_age = bone_age.unsqueeze(1)           # add extra dimension to label tensor
-                
+                patient_id = np.array(list(map(int, patient_id))) #convert from tuple of stringed ints to list of ints
                 data_size_count += img_batch.shape[0]
-                
                 ###
                 # Preprocessing steps may require edits depending on model/experiment needs
                 img_batch = img_batch.expand(-1,1,-1,-1)        #expand grayscale dim to rgb 3dim
@@ -83,11 +83,26 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                         loss.backward()
                         optimizer.step()
                 
-                batch_mean = torch.mean(torch.abs(outputs-bone_age))
-                batch_max = torch.max(torch.abs(outputs-bone_age))
+                abs_prediction_errors = torch.abs(outputs-bone_age)
+                batch_mean = torch.mean(abs_prediction_errors)
+                batch_max = torch.max(abs_prediction_errors)
                 if batch_max > max_estimated_error:
                     max_estimated_error = batch_max
                 # statistics
+                if phase == 'val': #store val performance histogram stats. note during validation batch size is 1
+                    if abs_prediction_errors.item() > 200:
+                        val_df.loc[patient_id[0],'error_beyond_200'] += 1
+                    elif abs_prediction_errors.item() > 100:
+                        val_df.loc[patient_id[0],'error_beyond_100'] += 1
+                    elif abs_prediction_errors.item() > 40:
+                        val_df.loc[patient_id[0],'error_beyond_40'] += 1
+                    elif abs_prediction_errors.item() > 20:
+                        val_df.loc[patient_id[0],'error_beyond_20'] += 1
+                    elif abs_prediction_errors.item() > 10:
+                        val_df.loc[patient_id[0],'error_beyond_10'] += 1
+                    else:
+                        val_df.loc[patient_id[0],'error_less_10'] += 1
+
                 running_loss += loss.item()
                 running_error_mean += batch_mean.item()
             
@@ -118,7 +133,10 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                         'loss':running_loss,
                         'scheduler_state_dict':lr_scheduler.state_dict()
                         },hp['model_output_dir']+'/'+hp['experiment_id']+'.pt')
-            
+            #Save final best model's weights for inference only
+            print("---Saving Best Model Weights")
+            torch.save(best_model_wts,hp['model_output_dir']+'/'+hp['experiment_id']+'_best_model.pt')
+
             for i, (metric,storedata) in enumerate(plot_metrics.items()): # will expect train model to return a dictionary of metric name as keys and datalist as corresponding dict values for plotting
                 
                 plt.figure(i)
@@ -139,6 +157,9 @@ def train_model(model,pretrained_transforms, loss_func, optimizer, lr_scheduler,
                 plt.ylabel(metric)
                 plt.title(plot_title)
                 plt.savefig(save_name, bbox_inches='tight')
+
+            #Save dataframe data to csv
+            val_df.to_csv(hp['model_output_dir']+'/'+hp['experiment_id']+"_error_histo_data.csv")
 
     time_elapsed = time.time() - since
     print(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
@@ -195,8 +216,10 @@ def main():
 
     modelManager = ModelManager()
 
-    train_transforms = modelManager.get_data_transform(["resize","adjust_contrast","normalize","gaussiannoise"])
-    val_transforms = modelManager.get_data_transform(["resize","adjust_contrast","normalize"])
+
+    train_transforms = modelManager.get_data_transform(hyperparams['train_image_transforms'])
+    val_transforms = modelManager.get_data_transform(hyperparams['val_image_transforms'])
+
     train_dp, val_dp = data.RSNA(root=args.data)
     train_dp = train_dp.map(apply_to_image(train_transforms))
     val_dp = val_dp.map(apply_to_image(val_transforms))
@@ -216,7 +239,12 @@ def main():
     # trainingModel.fc = nn.Sequential(trainingModel.fc, nn.ReLU(), nn.Linear(in_features=default_out_features, out_features=1, bias=True))
     trainingModel = trainingModel.to(device)
     optimizer = torch.optim.AdamW(trainingModel.parameters(),lr=hyperparams['optimizer_lr']) 
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=0.1, patience=10,min_lr=0.0002, verbose=True) #Start at large learning rate to quickly learn and only reduce when loss plateaus
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=hyperparams['scheduler_params']['factor'], 
+                                                                    patience=hyperparams['scheduler_params']['patience'],
+                                                                    min_lr=hyperparams['scheduler_params']['min_lr'], 
+                                                                    cooldown=hyperparams['scheduler_params']['cooldown'],
+                                                                    verbose=True) #Start at large learning rate to quickly learn and only reduce when loss plateaus
+
     loss_function = nn.MSELoss()
 
     hyperparams['resume_train'] = False 
@@ -233,7 +261,17 @@ def main():
         hyperparams['resume_train'] = True 
         print("---Resuming Training with Prev. Most Recently Saved Validation Loss: {:.3f} Epoch: {}".format(checkpoint['loss'],checkpoint['epoch']))
 
-    best_model = train_model(trainingModel,pretrained_transforms, loss_function, optimizer, scheduler, dataloaders, hyperparams,args)
+    # Setup pandas dataframe to store validation performance stats 
+    val_df = pd.read_csv(args.data+'/'+'Bone+Age+Validation+Set/Bone Age Validation Set/Validation Dataset.csv',index_col='Image ID')
+    #initialize new columns of 0s to track validation prediction performance histogram data
+    val_df['error_beyond_10'] = 0 
+    val_df['error_beyond_20'] = 0
+    val_df['error_beyond_40'] = 0
+    val_df['error_beyond_100'] = 0
+    val_df['error_beyond_200'] = 0
+    val_df['error_less_10'] = 0
+
+    best_model = train_model(trainingModel,pretrained_transforms, loss_function, optimizer, scheduler, dataloaders, hyperparams,args,val_df)
 
     #Save final best model's weights for inference only
     print("---Saving Best Model Weights")
