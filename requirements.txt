@@ -1,0 +1,9 @@
+matplotlib~=3.6
+numpy~=1.23
+opencv-python-headless==4.6.0.66
+Pillow~=9.3
+pydicom~=2.3
+pynetdicom~=2.0
+torch==1.13.0+cpu
+torchdata~=0.5
+torchvision==0.14.0+cpu

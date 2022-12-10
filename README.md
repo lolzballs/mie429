@@ -1,6 +1,22 @@
 # MIE429 Capstone Project
 
-## Installation/Development
+## Installation/Usage
+If you do not need CUDA (i.e. you aren't doing training), we recommend using
+the provided `requirements.txt`.
+
+```
+pip install requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+```
+
+Edit `app/__main__.py` to provide the location of the model, atlas, and your
+DICOM addresses.
+
+The app can be run by:
+```
+python app
+```
+
+## Development
 We provide an `environment.yml` file to define python/package versions.
 
 To set up a conda environment in `./env` using this yaml file:
