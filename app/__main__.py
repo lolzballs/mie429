@@ -8,8 +8,8 @@ from predictor import Predictor
 from dicom import SCP, SCU
 
 
-MODEL_LOCATION             = 'bilbily.pt'
-ATLAS_LOCATION             = 'app/atlas'
+MODEL_LOCATION             = 'resources/bilbily.pt'
+ATLAS_LOCATION             = 'resources/atlas'
 FONT_LOCATION              = 'resources/Arial.ttf'
 EXAMPLE_SIGNATURE_LOCATION = 'dataset_preprocessing/icon.png'
 SCP_BIND_ADDRESS           = ('0.0.0.0', 4242)
