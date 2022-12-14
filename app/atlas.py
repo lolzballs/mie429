@@ -6,14 +6,14 @@ import numpy as np
 
 
 class Atlas:
-    def __init__(self, atlas_path: str):
+    def __init__(self, atlas_path: str, font_path: str):
         self._atlas_paths = {
             'M': os.path.join(atlas_path, 'male_atlas'),
             'F': os.path.join(atlas_path, 'female_atlas'),
         }
         self._atlas_nums = {sex: _get_atlas_nums(path)
                             for sex, path in self._atlas_paths.items()}
-        self._font = ImageFont.truetype("Arial.ttf", 100)
+        self._font = ImageFont.truetype(font_path, 100)
 
     # def case_am
 

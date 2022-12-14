@@ -10,6 +10,7 @@ from dicom import SCP, SCU
 
 MODEL_LOCATION             = 'bilbily.pt'
 ATLAS_LOCATION             = 'app/atlas'
+FONT_LOCATION              = 'resources/Arial.ttf'
 EXAMPLE_SIGNATURE_LOCATION = 'dataset_preprocessing/icon.png'
 SCP_BIND_ADDRESS           = ('0.0.0.0', 4242)
 REMOTE_DICOM_SERVER        = ('15.222.138.226', 4242)
@@ -41,6 +42,7 @@ if __name__ == '__main__':
     predictor = Predictor(MODEL_LOCATION,
                           ATLAS_LOCATION,
                           EXAMPLE_SIGNATURE_LOCATION,
+                          FONT_LOCATION,
                           thread_count if thread_count is not None else 2)
 
     scu = SCU(predictor, REMOTE_DICOM_SERVER)

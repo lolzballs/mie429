@@ -91,8 +91,8 @@ class Predictor:
     _model: torch.nn.Module
 
     def __init__(self, model_path: str, atlas_path: str, icon_path: str,
-                 num_workers: int):
-        self._atlas = Atlas(atlas_path)
+                 font_path: str, num_workers: int):
+        self._atlas = Atlas(atlas_path, font_path)
         self._image_matcher = ImageMatcher(cv2.imread(icon_path))
         self._growth_chart = GrowthChart()
 
