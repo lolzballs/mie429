@@ -4,6 +4,7 @@ opencv-python-headless==4.6.0.66
 Pillow~=9.3
 pydicom~=2.3
 pynetdicom~=2.0
+scipy~=1.9
 torch==1.13.0+cpu
 torchdata~=0.5
 torchvision==0.14.0+cpu
